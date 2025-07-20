@@ -7,10 +7,10 @@
 
 import SwiftUI
 import Foundation
-import FirebaseFirestore // Firestoreをインポート
-import FirebaseStorage // Firebase Storageをインポート
-import FirebaseAuth // FirebaseAuthをインポート (ユーザーID取得のため)
-import Combine // Combineフレームワークをインポート
+import FirebaseFirestore
+import FirebaseStorage
+import FirebaseAuth
+import Combine
 
 class AlbumManager: ObservableObject {
     static let shared = AlbumManager()
@@ -22,7 +22,7 @@ class AlbumManager: ObservableObject {
     private init() {
         db = Firestore.firestore()
         storage = Storage.storage()
-        auth = Auth.auth()
+        auth = FirebaseAuth.Auth.auth() // FirebaseAuth.Auth.auth() に変更
     }
 
     // MARK: - 写真の保存とアップロード（メイン処理）
@@ -88,15 +88,20 @@ class AlbumManager: ObservableObject {
             ownerName: currentUserProfile.name, // 自分の名前を記録
             ownerIcon: currentUserProfile.icon, // 自分のアイコンパスを記録
             friendNameAtCapture: receivedUser.name, // 相手の名前を記録
-            friendIconAtCapture: receivedUser.icon // 相手のアイコンパスを記録
+            friendIconAtCapture: receivedUser.icon, // 相手のアイコンパスを記録
+            viewerUUIDs: [userId, receivedUser.uuid] // 撮影者と相手のUUIDを含める
         )
 
         let albumPhotoRef = db.collection("users").document(userId).collection("albums").document(photoUUID)
         
+        // MARK: 4. 共有フィード用コレクションにもメタデータを保存 (新しく追加)
+        let feedPhotoRef = db.collection("feedPhotos").document(photoUUID)
+
         do {
             let data = try Firestore.Encoder().encode(newAlbumPhoto)
-            try await albumPhotoRef.setData(data)
-            print("[AlbumManager] ✅ Firestoreメタデータ保存成功: \(photoUUID)")
+            try await albumPhotoRef.setData(data) // 自分のアルバムに保存
+            try await feedPhotoRef.setData(data) // 共有フィード用コレクションに保存
+            print("[AlbumManager] ✅ Firestoreメタデータ保存成功: \(photoUUID) (自分のアルバム & 共有フィード)")
         } catch {
             print("[AlbumManager] ❌ Firestoreメタデータ保存失敗: \(error.localizedDescription)")
             throw PhotoError.firestoreSaveFailed(error)
@@ -147,6 +152,30 @@ class AlbumManager: ObservableObject {
         
         print("[AlbumManager] ✅ 友達アルバム写真読み込み成功 (\(friendPhotos.count)件) for friend: \(friendUUID)")
         return friendPhotos
+    }
+
+    // MARK: - 共有フィード写真の読み込み (新しく追加)
+    /// 現在のユーザーが見るべき共有フィード写真をFirestoreから読み込みます。
+    /// - Parameter userId: 現在のユーザーのUUID
+    /// - Returns: AlbumPhotoの配列
+    func loadSharedFeedPhotos(for userId: String) async throws -> [AlbumPhoto] {
+        let feedPhotosCollectionRef = db.collection("feedPhotos")
+        
+        do {
+            // viewerUUIDs 配列に自分のUUIDが含まれている写真をクエリ
+            let querySnapshot = try await feedPhotosCollectionRef
+                                        .whereField("viewerUUIDs", arrayContains: userId)
+                                        .getDocuments()
+            
+            let photos = try querySnapshot.documents.map { document in
+                try document.data(as: AlbumPhoto.self)
+            }
+            print("[AlbumManager] ✅ 共有フィード写真読み込み成功 (\(photos.count)件) for user: \(userId)")
+            return photos
+        } catch {
+            print("[AlbumManager] ❌ 共有フィード写真読み込み失敗: \(error.localizedDescription)")
+            throw PhotoError.firestoreLoadFailed(error)
+        }
     }
 
     // MARK: - Storageからの画像ダウンロード

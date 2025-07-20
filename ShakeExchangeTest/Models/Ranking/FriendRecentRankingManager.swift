@@ -10,7 +10,8 @@ import FirebaseFirestore
 
 class FriendRecentRankingManager: ObservableObject {
     @Published var topFriends: [Friend] = []
-
+    @Published var allTimeTopFriends: [Friend] = []
+    
     func fetchTopFriends(from allFriends: [Friend]) {
         let recentDateThreshold = Calendar.current.date(byAdding: .day, value: -7, to: Date())!
         let formatter = DateFormatter()
@@ -26,6 +27,15 @@ class FriendRecentRankingManager: ObservableObject {
 
         DispatchQueue.main.async {
             self.topFriends = Array(ranked.prefix(5))
+        }
+    }
+
+    func fetchAllTimeTopFriends(from allFriends: [Friend]) {
+        let ranked = allFriends.sorted {
+            ($0.encounterCount ?? 0) > ($1.encounterCount ?? 0)
+        }
+        DispatchQueue.main.async {
+            self.allTimeTopFriends = Array(ranked.prefix(5))
         }
     }
 }

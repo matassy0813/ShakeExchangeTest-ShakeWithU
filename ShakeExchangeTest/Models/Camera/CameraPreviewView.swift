@@ -5,16 +5,21 @@
 //  Created by 俣江悠聖 on 2025/05/21.
 //
 import SwiftUI
-import GoogleMobileAds
+import GoogleMobileAds // インポートはそのまま
 
 struct CameraPreviewView: View {
     @Binding var mainImage: UIImage
     @Binding var subImage: UIImage
     @Namespace private var imageSwap
     @State var isSwapped: Bool = false
-    @State private var interstitial: InterstitialAd?
 
-    @Environment(\.presentationMode) var presentationMode // ビューを閉じるために使用
+    // InterstitialAdManager のインスタンスを保持
+    @StateObject private var interstitialAdManager = InterstitialAdManager()
+
+    // 変更: このビューを閉じるためのpresentationMode
+    @Environment(\.presentationMode) var presentationMode
+    // 追加: CameraView を閉じるためのBinding
+    @Binding var shouldDismissCameraView: Bool
 
     var receivedUser: CurrentUser // CameraViewから受け取る相手のユーザー情報
     var friendName: String
@@ -25,8 +30,8 @@ struct CameraPreviewView: View {
     @State private var showingSaveAlert: Bool = false
     @State private var saveAlertMessage: String = ""
     @State private var navigateToConfirmation: Bool = false // 確認ポップアップへの遷移フラグ
-    @State private var navigateToPhotoDetail: Bool = false // PhotoDetailViewへの遷移フラグ
-    @State private var photoToShowInDetail: AlbumPhoto? = nil // PhotoDetailViewに渡す写真
+    @State private var navigateToPhotoDetail: Bool = false // PhotoDetailViewへの遷移フラグ (今回は未使用だが残しておく)
+    @State private var photoToShowInDetail: AlbumPhoto? = nil // PhotoDetailViewに渡す写真 (今回は未使用だが残しておく)
     @State private var savedAlbumPhoto: AlbumPhoto? = nil // 保存されたAlbumPhotoを保持
 
     var body: some View {
@@ -139,16 +144,16 @@ struct CameraPreviewView: View {
         }
         .fullScreenCover(isPresented: $navigateToConfirmation) {
             // ポップアップアニメーションと写真ダウンロード画面
-            if let photo = self.savedAlbumPhoto { // <-- self. を追加して明示的に参照
+            if let photo = self.savedAlbumPhoto {
                 PhotoExchangeConfirmationView(
-                    savedPhoto: photo, // 安全にアンラップされたphotoを渡す
+                    savedPhoto: photo,
                     receivedUser: receivedUser,
+                    // 修正: onCompletion クロージャが呼ばれたら、CameraPreviewView と CameraView も閉じる
                     onCompletion: { savedPhoto, dismissConfirmation in
-                        // PhotoExchangeConfirmationViewが閉じられたら、このビューも閉じる
-                        dismissConfirmation() // PhotoExchangeConfirmationViewを閉じる
-                        // ここではCameraPreviewViewを閉じない。親ビューからの指示を待つ
-                        // presentationMode.wrappedValue.dismiss() // この行を削除またはコメントアウト
-                        print("[CameraPreviewView] PhotoExchangeConfirmationViewが閉じられました。")
+                        dismissConfirmation() // PhotoExchangeConfirmationView を閉じる
+                        self.presentationMode.wrappedValue.dismiss() // CameraPreviewView を閉じる
+                        self.shouldDismissCameraView = true // CameraView を閉じるように通知
+                        print("[CameraPreviewView] PhotoExchangeConfirmationViewが閉じられました。CameraPreviewViewとCameraViewを閉じます。")
                     }
                 )
             } else {
@@ -156,12 +161,16 @@ struct CameraPreviewView: View {
             }
         }
         .fullScreenCover(isPresented: $navigateToPhotoDetail) {
-            // PhotoDetailView を表示
-            if let photo = self.photoToShowInDetail { // <-- self. を追加して明示的に参照
+            // PhotoDetailView を表示 (今回は未使用だが残しておく)
+            if let photo = self.photoToShowInDetail {
                 PhotoDetailView(photo: photo, receivedUser: receivedUser)
             } else {
                 Text("エラー: 交換された写真の詳細をロードできませんでした。")
             }
+        }
+        .onAppear {
+            // ビューが表示されたときに広告をプリロードしておく
+            interstitialAdManager.loadAd()
         }
     }
 
@@ -180,28 +189,42 @@ struct CameraPreviewView: View {
             do {
                 // AlbumManagerを呼び出して写真を保存・アップロード
                 let savedPhoto = try await AlbumManager.shared.saveAndUploadPhoto(
-                    outerImage: mainImage, // 直接 mainImage を使用
-                    innerImage: subImage,  // 直接 subImage を使用
+                    outerImage: mainImage,
+                    innerImage: subImage,
                     receivedUser: receivedUser,
-                    note: "" // 必要であればメモを追加
+                    note: ""
                 )
                 print("[CameraPreviewView] ✅ 写真のクラウド保存とメタデータ登録が完了しました。")
                 
-                // 保存成功後、ポップアップアニメーション画面に遷移
+                // 保存成功後
                 DispatchQueue.main.async {
                     self.isSavingPhoto = false
-                    self.savedAlbumPhoto = savedPhoto // <-- self. を追加して明示的に参照
-                    // ✅ 広告表示 → 終了後に画面遷移
-                    self.showInterstitialAd {
+                    self.savedAlbumPhoto = savedPhoto // 保存した写真を保持
+
+                    // 修正: rootViewController を取得し、広告表示に渡す
+                    if let rootViewController = UIApplication.shared.topMostViewController {
+                        interstitialAdManager.showAd(
+                            from: rootViewController, // 引数を修正
+                            onPresented: {
+                                // 広告が表示された瞬間に行う処理（今回は画面を閉じない）
+                                print("[CameraPreviewView] ℹ️ 広告表示完了。")
+                            },
+                            onDismissed: {
+                                // 広告が閉じられた、または表示されなかった場合に実行される
+                                self.navigateToConfirmation = true
+                                print("[CameraPreviewView] ✅ 広告閉鎖（またはスキップ）、PhotoExchangeConfirmationView を開きます。")
+                            }
+                        )
+                    } else {
+                        print("❗️ topMostViewController の取得に失敗しました。広告なしで画面遷移します。")
                         self.navigateToConfirmation = true
                     }
                 }
 
-            } catch let error as NSError { // NSErrorとしてキャッチし、より詳細な情報を取得
+            } catch let error as NSError {
                 print("[CameraPreviewView] ❌ 写真保存失敗: \(error.localizedDescription) (Code: \(error.code))")
                 DispatchQueue.main.async {
                     self.isSavingPhoto = false
-                    // Firebase StorageやFirestoreのエラーコードを具体的に表示
                     if error.domain == "FIRStorageErrorDomain" {
                         self.saveAlertMessage = "写真のアップロードに失敗しました (コード: \(error.code))。\n\nネットワーク接続をご確認いただくか、アプリのカメラ・写真アクセス権限が許可されているかご確認ください。"
                     } else if error.domain == "FIRFirestoreErrorDomain" {
@@ -211,7 +234,7 @@ struct CameraPreviewView: View {
                     }
                     self.showingSaveAlert = true
                 }
-            } catch { // その他のエラー
+            } catch {
                 print("[CameraPreviewView] ❌ 写真保存失敗: \(error.localizedDescription)")
                 DispatchQueue.main.async {
                     self.isSavingPhoto = false
@@ -223,51 +246,41 @@ struct CameraPreviewView: View {
     }
 
     func loadImage(named filename: String) -> UIImage? {
-        // アセットカタログからの読み込みを試行
         if let image = UIImage(named: filename) {
             return image
         }
-        // ドキュメントディレクトリからの読み込みを試行
         let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent(filename)
         return UIImage(contentsOfFile: url.path)
     }
-    
-    func showInterstitialAd(onComplete: @escaping () -> Void) {
-        let request = Request()
-        InterstitialAd.load(withAdUnitID: "ca-app-pub-6432164084077876~1939978994", request: request) { ad, error in
-            if let error = error {
-                print("広告のロード失敗: \(error.localizedDescription)")
-                onComplete()
-                return
-            }
+}
 
-            interstitial = ad
-            interstitial?.fullScreenContentDelegate = AdDelegate(onDismiss: onComplete)
-
-            if let rootVC = UIApplication.shared.windows.first?.rootViewController {
-                interstitial?.present(fromRootViewController: rootVC)
-            } else {
-                print("❗️rootViewController取得失敗")
-                onComplete()
-            }
-        }
+// 拡張はそのまま残します
+extension UIApplication {
+    var topMostViewController: UIViewController? {
+        connectedScenes
+            .filter { $0.activationState == .foregroundActive }
+            .compactMap { $0 as? UIWindowScene }
+            .first?
+            .windows
+            .filter { $0.isKeyWindow }
+            .first?
+            .rootViewController?
+            .topMostViewController
     }
 }
 
-class AdDelegate: NSObject, FullScreenContentDelegate {
-    let onDismiss: () -> Void
-
-    init(onDismiss: @escaping () -> Void) {
-        self.onDismiss = onDismiss
-    }
-
-    func adDidDismissFullScreenContent(_ ad: FullScreenPresentingAd) {
-        onDismiss()
-    }
-
-    func ad(_ ad: FullScreenPresentingAd, didFailToPresentFullScreenContentWithError error: Error) {
-        print("広告表示失敗: \(error)")
-        onDismiss()
+extension UIViewController {
+    var topMostViewController: UIViewController {
+        if let presented = presentedViewController {
+            return presented.topMostViewController
+        }
+        if let navigation = self as? UINavigationController {
+            return navigation.visibleViewController?.topMostViewController ?? navigation
+        }
+        if let tab = self as? UITabBarController {
+            return tab.selectedViewController?.topMostViewController ?? tab
+        }
+        return self
     }
 }

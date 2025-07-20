@@ -17,6 +17,9 @@ struct CameraView: View {
     @State private var inner: UIImage? = nil
     @State private var navigateToPreview = false
 
+    // 追加: CameraPreviewView が閉じたいときに通知を受け取るためのBinding
+    @State private var shouldDismissCameraView: Bool = false
+
     var receivedUser: CurrentUser // FriendFoundViewから渡される相手のユーザー情報
     var friendName: String
     var friendIcon: String
@@ -59,18 +62,22 @@ struct CameraView: View {
                                     set: { self.outer = $0 }),
                 subImage: Binding(get: { self.inner ?? UIImage() },
                                    set: { self.inner = $0 }),
-                receivedUser: receivedUser, // ここで receivedUser を渡す
+                shouldDismissCameraView: $shouldDismissCameraView, // ここでBindingを渡す
+                receivedUser: receivedUser,
                 friendName: receivedUser.name,
                 friendIcon: receivedUser.icon,
                 userIcon: userIcon
             )
-//            .onDisappear { // CameraPreviewViewが閉じられたら
-//                presentationMode.wrappedValue.dismiss() // CameraViewを閉じる
-//                print("[CameraView] 📷 CameraPreviewViewが閉じられたため、CameraViewを閉じます。")
-//            }
             .onAppear {
                 print("[CameraView] 🔵 fullScreenCover 渡し時 outer: \(String(describing: outer?.size))")
                 print("[CameraView] 🔵 fullScreenCover 渡し時 inner: \(String(describing: inner?.size))")
+            }
+        }
+        // shouldDismissCameraView が true になったら、この CameraView を閉じる
+        .onChange(of: shouldDismissCameraView) { newValue in
+            if newValue {
+                presentationMode.wrappedValue.dismiss()
+                print("[CameraView] 📷 CameraPreviewViewからの通知により、CameraViewを閉じます。")
             }
         }
     }

@@ -61,7 +61,10 @@ public struct AlbumPhoto: Identifiable, Hashable, Codable {
     public var friendNameAtCapture: String? // 撮影時の友達の名前
     public var friendIconAtCapture: String? // 撮影時の友達のアイコンパス
 
-    public init(userUUID: String, friendUUID: String, outerImage: String, innerImage: String, date: String, note: String, rotation: Double, pinColor: Color, ownerName: String? = nil, ownerIcon: String? = nil, friendNameAtCapture: String? = nil, friendIconAtCapture: String? = nil) {
+    // 追加: この写真を見ることができるユーザーのUUIDs
+    public var viewerUUIDs: [String]?
+
+    public init(userUUID: String, friendUUID: String, outerImage: String, innerImage: String, date: String, note: String, rotation: Double, pinColor: Color, ownerName: String? = nil, ownerIcon: String? = nil, friendNameAtCapture: String? = nil, friendIconAtCapture: String? = nil, viewerUUIDs: [String]? = nil) {
         self.userUUID = userUUID
         self.friendUUID = friendUUID
         self.outerImage = outerImage
@@ -74,6 +77,7 @@ public struct AlbumPhoto: Identifiable, Hashable, Codable {
         self.ownerIcon = ownerIcon
         self.friendNameAtCapture = friendNameAtCapture
         self.friendIconAtCapture = friendIconAtCapture
+        self.viewerUUIDs = viewerUUIDs
     }
 }
 
