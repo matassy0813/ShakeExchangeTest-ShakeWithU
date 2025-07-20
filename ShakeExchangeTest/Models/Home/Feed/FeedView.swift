@@ -1,0 +1,65 @@
+//
+//  Untitled.swift
+//  ShakeExchangeTest
+//
+//  Created by 俣江悠聖 on 2025/05/20.
+//
+import SwiftUI
+
+struct FeedView: View {
+    @ObservedObject var feedManager = FeedManager.shared
+
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                VStack(spacing: 20) {
+                    if feedManager.isLoading {
+                        ProgressView("Loading Feed...")
+                            .padding()
+                    } else if let error = feedManager.errorMessage {
+                        Text("Error loading feed: \(error)")
+                            .foregroundColor(.red)
+                            .padding()
+                    } else if feedManager.feed.isEmpty {
+                        ContentUnavailableView(
+                            "No Feed Yet",
+                            systemImage: "photo.stack.fill",
+                            description: Text("Connect with friends and take photos to see them here!")
+                        )
+                        .padding(.top, 50)
+                    } else {
+                        ForEach(feedManager.feed) { item in
+                            switch item {
+                            case .entry(let entry):
+                                FeedItemView(feedEntry: entry)
+                            case .ad:
+                                AdView()
+                                    .frame(height: 200)
+                                    .background(Color.yellow.opacity(0.2))
+                                    .cornerRadius(12)
+                                    .padding(.vertical, 10)
+                            }
+                        }
+                    }
+                }
+                .padding()
+            }
+            // MARK: - Pull-to-Refresh 機能を追加
+            .refreshable {
+                // 認証済みでuserIdが存在する場合のみフィードをロード
+                if AuthManager.shared.isAuthenticated, let userId = AuthManager.shared.userId {
+                    print("[FeedView] 🔄 Pull-to-Refresh: フィードを更新します。")
+                    await feedManager.loadFeed(for: userId, friends: FriendManager.shared.friends)
+                } else {
+                    print("[FeedView] ℹ️ Pull-to-Refresh: 未認証のためフィード更新をスキップします。")
+                }
+            }
+            .navigationTitle("Feed")
+//            .navigationBarItems(
+//                leading: Image(systemName: "camera"), // カメラアイコン
+//                trailing: Image(systemName: "paperplane") // メッセージアイコン
+//            )
+        }
+    }
+}
+
