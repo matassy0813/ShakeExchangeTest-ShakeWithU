@@ -9,13 +9,9 @@ import GoogleMobileAds
 import SwiftUI
 
 class InterstitialAdManager: NSObject, ObservableObject, FullScreenContentDelegate {
-    private var interstitial: InterstitialAd?
-    // AdWindowPresenter は使用しないため削除
-    // private var adWindowPresenter: AdWindowPresenter?
-
-    // 広告が閉じられた後に実行するクロージャ
+    private var interstitial: InterstitialAd? // InterstitialAd は GoogleMobileAds SDK の InterstitialAd
+    
     private var onAdDismissedCompletion: (() -> Void)?
-    // 広告が表示された後に実行するクロージャ（adDidRecordImpression に移行）
     private var onAdImpressionRecordedCompletion: (() -> Void)? // 今回は使わないが残しておく
 
     override init() {
@@ -26,16 +22,17 @@ class InterstitialAdManager: NSObject, ObservableObject, FullScreenContentDelega
     func loadAd() {
         print("💡 InterstitialAdManager: ロード開始...")
         let request = Request()
-        // 既存の広告があれば、新しいロードの前にnilにリセット
-        self.interstitial = nil // 新しいロードを開始する前に既存の広告をクリア
+        // MARK: - 堅牢性向上: 新しいロードを開始する前に既存の広告をクリア
+        self.interstitial = nil
         InterstitialAd.load(
             with: "ca-app-pub-3940256099942544/4411468910",
             request: request,
             completionHandler: { [weak self] ad, error in
                 guard let self = self else { return }
+                // MARK: - 堅牢性向上: ロード失敗時のnilクリア
                 if let error = error {
                     print("❌ Interstitial ad failed to load: \(error.localizedDescription)")
-                    // ロード失敗時はinterstitialはnilのまま
+                    self.interstitial = nil // ロード失敗時はinterstitialをnilに保つ
                     return
                 }
                 self.interstitial = ad
@@ -45,24 +42,21 @@ class InterstitialAdManager: NSObject, ObservableObject, FullScreenContentDelega
         )
     }
 
-    // 広告表示後に実行するクロージャを受け取るように変更
-    // 修正: from rootViewController を再度追加
     func showAd(from rootViewController: UIViewController,
-                onPresented: @escaping () -> Void, // 今回は使わないが、将来的に必要なら利用
+                onPresented: @escaping () -> Void,
                 onDismissed: @escaping () -> Void) {
         
-        // 広告が準備できていない場合は、すぐにonDismissedを呼んでロードを試みる
+        // MARK: - 堅牢性向上: 広告が準備できていない場合の早期終了とロード試行
         guard let ad = interstitial else {
-            print("⚠️ Interstitial ad not ready for presentation. Proceeding without showing ad.")
-            onDismissed()
+            print("⚠️ Interstitial ad not ready for presentation. Proceeding without showing ad. Trying to load next ad.")
+            onDismissed() // 広告が表示できない場合はonDismissedをすぐに呼ぶ
             loadAd() // 次の表示のために広告をロード
             return
         }
         
-        self.onAdImpressionRecordedCompletion = onPresented // これを呼び出すのは adDidRecordImpression
+        self.onAdImpressionRecordedCompletion = onPresented
         self.onAdDismissedCompletion = onDismissed
 
-        // 広告を提示
         ad.present(from: rootViewController)
         // ここでは interstitial を nil にせず、デリゲートメソッドが呼ばれるまで待つ
     }
@@ -72,6 +66,7 @@ class InterstitialAdManager: NSObject, ObservableObject, FullScreenContentDelega
     func adDidRecordImpression(_ ad: FullScreenPresentingAd) {
         print("✅ Interstitial ad impression recorded")
         onAdImpressionRecordedCompletion?()
+        // MARK: - 堅牢性向上: クロージャは一度呼ばれたらクリア
         onAdImpressionRecordedCompletion = nil
         // 広告が正常に表示され、インプレッションが記録されたら、ここで次の広告をロードするキューに入れる
         // loadAd() は adDidDismissFullScreenContent で呼ぶためここでは呼ばない
@@ -79,20 +74,21 @@ class InterstitialAdManager: NSObject, ObservableObject, FullScreenContentDelega
 
     func adDidDismissFullScreenContent(_ ad: FullScreenPresentingAd) {
         print("ℹ️ Interstitial ad dismissed")
-        self.interstitial = nil // 広告が閉じられたのでクリア
+        self.interstitial = nil
         loadAd() // 次の表示のために新しい広告をプリロード
 
-        onAdDismissedCompletion?() // 保持していた完了クロージャを実行
+        onAdDismissedCompletion?()
+        // MARK: - 堅牢性向上: クロージャは一度呼ばれたらクリア
         onAdDismissedCompletion = nil
     }
 
     func ad(_ ad: FullScreenPresentingAd, didFailToPresentFullScreenContentWithError error: Error) {
         print("❌ Failed to present interstitial ad: \(error.localizedDescription)")
-        self.interstitial = nil // 広告の表示に失敗したのでクリア
+        self.interstitial = nil
         loadAd() // 次の表示のために新しい広告をプリロード
 
-        onAdDismissedCompletion?() // 保持していた完了クロージャを実行
+        onAdDismissedCompletion?()
+        // MARK: - 堅牢性向上: クロージャは一度呼ばれたらクリア
         onAdDismissedCompletion = nil
     }
 }
-

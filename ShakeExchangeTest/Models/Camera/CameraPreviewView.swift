@@ -5,7 +5,7 @@
 //  Created by 俣江悠聖 on 2025/05/21.
 //
 import SwiftUI
-import GoogleMobileAds // インポートはそのまま
+import GoogleMobileAds
 
 struct CameraPreviewView: View {
     @Binding var mainImage: UIImage
@@ -13,26 +13,23 @@ struct CameraPreviewView: View {
     @Namespace private var imageSwap
     @State var isSwapped: Bool = false
 
-    // InterstitialAdManager のインスタンスを保持
     @StateObject private var interstitialAdManager = InterstitialAdManager()
 
-    // 変更: このビューを閉じるためのpresentationMode
     @Environment(\.presentationMode) var presentationMode
-    // 追加: CameraView を閉じるためのBinding
     @Binding var shouldDismissCameraView: Bool
 
-    var receivedUser: CurrentUser // CameraViewから受け取る相手のユーザー情報
+    var receivedUser: CurrentUser
     var friendName: String
     var friendIcon: String
     var userIcon: String
 
-    @State private var isSavingPhoto: Bool = false // 写真保存中のインジケーター
+    @State private var isSavingPhoto: Bool = false
     @State private var showingSaveAlert: Bool = false
     @State private var saveAlertMessage: String = ""
-    @State private var navigateToConfirmation: Bool = false // 確認ポップアップへの遷移フラグ
-    @State private var navigateToPhotoDetail: Bool = false // PhotoDetailViewへの遷移フラグ (今回は未使用だが残しておく)
-    @State private var photoToShowInDetail: AlbumPhoto? = nil // PhotoDetailViewに渡す写真 (今回は未使用だが残しておく)
-    @State private var savedAlbumPhoto: AlbumPhoto? = nil // 保存されたAlbumPhotoを保持
+    @State private var navigateToConfirmation: Bool = false
+    @State private var navigateToPhotoDetail: Bool = false
+    @State private var photoToShowInDetail: AlbumPhoto? = nil
+    @State private var savedAlbumPhoto: AlbumPhoto? = nil
 
     var body: some View {
         VStack(spacing: 20) {
@@ -40,7 +37,6 @@ struct CameraPreviewView: View {
                 .font(.title)
                 .bold()
 
-            // プレビューエリア（タップで入れ替え）
             ZStack(alignment: .topTrailing) {
                 Group {
                     Image(uiImage: mainImage)
@@ -65,7 +61,6 @@ struct CameraPreviewView: View {
                     swapImages()
                 }
                .onAppear {
-                   // Debugging image sizes
                    print("[CameraPreviewView] 🟢 mainImage size: \(mainImage.size)")
                    print("[CameraPreviewView] 🟢 subImage size: \(subImage.size)")
                }
@@ -73,10 +68,9 @@ struct CameraPreviewView: View {
             }
             .animation(.easeInOut(duration: 0.4), value: mainImage)
 
-            // ボタン：戻る / Send
             HStack(spacing: 16) {
-                Button("戻る") { // ボタン名を「戻る」に変更
-                    presentationMode.wrappedValue.dismiss() // カメラビューに戻る
+                Button("戻る") {
+                    presentationMode.wrappedValue.dismiss()
                 }
                 .padding()
                 .frame(maxWidth: .infinity)
@@ -99,38 +93,26 @@ struct CameraPreviewView: View {
                 .background(Color.blue)
                 .foregroundColor(.white)
                 .cornerRadius(10)
-                .disabled(isSavingPhoto) // 保存中はボタンを無効化
+                .disabled(isSavingPhoto)
             }
             .padding(.horizontal)
 
             // 相手表示
             HStack {
-                if let uiImage = loadImage(named: userIcon) {
-                    Image(uiImage: uiImage)
-                        .resizable()
-                        .clipShape(Circle())
-                        .frame(width: 60, height: 60)
-                } else {
-                    Image(userIcon)
-                        .resizable()
-                        .clipShape(Circle())
-                        .frame(width: 60, height: 60)
-                }
+                // MARK: - 堅牢性向上: ユーザーアイコンの表示ロジックを強化
+                Image(uiImage: loadImageSafely(named: userIcon))
+                    .resizable()
+                    .clipShape(Circle())
+                    .frame(width: 60, height: 60)
 
                 Image(systemName: "arrow.right")
                     .foregroundColor(.gray)
 
-                if let uiImage = loadImage(named: friendIcon) {
-                    Image(uiImage: uiImage)
-                        .resizable()
-                        .clipShape(Circle())
-                        .frame(width: 60, height: 60)
-                } else {
-                    Image(friendIcon)
-                        .resizable()
-                        .clipShape(Circle())
-                        .frame(width: 60, height: 60)
-                }
+                // MARK: - 堅牢性向上: フレンドアイコンの表示ロジックを強化
+                Image(uiImage: loadImageSafely(named: friendIcon))
+                    .resizable()
+                    .clipShape(Circle())
+                    .frame(width: 60, height: 60)
 
                 Text(friendName)
                     .font(.subheadline)
@@ -139,37 +121,41 @@ struct CameraPreviewView: View {
             Spacer()
         }
         .padding()
-        .alert(isPresented: $showingSaveAlert) { // 保存失敗時のアラート
+        .alert(isPresented: $showingSaveAlert) {
             Alert(title: Text("エラー"), message: Text(saveAlertMessage), dismissButton: .default(Text("OK")))
         }
         .fullScreenCover(isPresented: $navigateToConfirmation) {
-            // ポップアップアニメーションと写真ダウンロード画面
             if let photo = self.savedAlbumPhoto {
                 PhotoExchangeConfirmationView(
                     savedPhoto: photo,
                     receivedUser: receivedUser,
-                    // 修正: onCompletion クロージャが呼ばれたら、CameraPreviewView と CameraView も閉じる
                     onCompletion: { savedPhoto, dismissConfirmation in
-                        dismissConfirmation() // PhotoExchangeConfirmationView を閉じる
-                        self.presentationMode.wrappedValue.dismiss() // CameraPreviewView を閉じる
-                        self.shouldDismissCameraView = true // CameraView を閉じるように通知
+                        dismissConfirmation()
+                        self.presentationMode.wrappedValue.dismiss()
+                        self.shouldDismissCameraView = true
                         print("[CameraPreviewView] PhotoExchangeConfirmationViewが閉じられました。CameraPreviewViewとCameraViewを閉じます。")
                     }
                 )
             } else {
-                Text("エラー: 写真が保存されていません。")
+                // MARK: - エラーケース追加: savedAlbumPhotoがnilの場合
+                Text("エラー: 写真が保存されていません。PhotoExchangeConfirmationViewを表示できません。")
+                    .onAppear {
+                        print("[CameraPreviewView] ❌ エラー: savedAlbumPhotoがnilのためPhotoExchangeConfirmationViewを表示できませんでした。")
+                    }
             }
         }
         .fullScreenCover(isPresented: $navigateToPhotoDetail) {
-            // PhotoDetailView を表示 (今回は未使用だが残しておく)
             if let photo = self.photoToShowInDetail {
                 PhotoDetailView(photo: photo, receivedUser: receivedUser)
             } else {
-                Text("エラー: 交換された写真の詳細をロードできませんでした。")
+                // MARK: - エラーケース追加: photoToShowInDetailがnilの場合
+                Text("エラー: 交換された写真の詳細をロードできませんでした。PhotoDetailViewを表示できません。")
+                    .onAppear {
+                        print("[CameraPreviewView] ❌ エラー: photoToShowInDetailがnilのためPhotoDetailViewを表示できませんでした。")
+                    }
             }
         }
         .onAppear {
-            // ビューが表示されたときに広告をプリロードしておく
             interstitialAdManager.loadAd()
         }
     }
@@ -184,10 +170,15 @@ struct CameraPreviewView: View {
     
     // MARK: - 写真をクラウドに保存するロジック
     private func savePhotoToCloud() {
+        // MARK: - 堅牢性向上: 多重タップ防止
+        guard !isSavingPhoto else {
+            print("[CameraPreviewView] ⚠️ 写真保存処理が既に進行中のためスキップ。")
+            return
+        }
         isSavingPhoto = true
+        
         Task {
             do {
-                // AlbumManagerを呼び出して写真を保存・アップロード
                 let savedPhoto = try await AlbumManager.shared.saveAndUploadPhoto(
                     outerImage: mainImage,
                     innerImage: subImage,
@@ -196,62 +187,66 @@ struct CameraPreviewView: View {
                 )
                 print("[CameraPreviewView] ✅ 写真のクラウド保存とメタデータ登録が完了しました。")
                 
-                // 保存成功後
                 DispatchQueue.main.async {
                     self.isSavingPhoto = false
-                    self.savedAlbumPhoto = savedPhoto // 保存した写真を保持
+                    self.savedAlbumPhoto = savedPhoto
 
-                    // 修正: rootViewController を取得し、広告表示に渡す
                     if let rootViewController = UIApplication.shared.topMostViewController {
                         interstitialAdManager.showAd(
-                            from: rootViewController, // 引数を修正
+                            from: rootViewController,
                             onPresented: {
-                                // 広告が表示された瞬間に行う処理（今回は画面を閉じない）
                                 print("[CameraPreviewView] ℹ️ 広告表示完了。")
                             },
                             onDismissed: {
-                                // 広告が閉じられた、または表示されなかった場合に実行される
                                 self.navigateToConfirmation = true
                                 print("[CameraPreviewView] ✅ 広告閉鎖（またはスキップ）、PhotoExchangeConfirmationView を開きます。")
                             }
                         )
                     } else {
-                        print("❗️ topMostViewController の取得に失敗しました。広告なしで画面遷移します。")
+                        // MARK: - エラー処理強化: topMostViewController取得失敗時のログとアラート
+                        let errorMessage = "❗️ topMostViewController の取得に失敗しました。広告なしで画面遷移します。アプリの表示に問題がある可能性があります。"
+                        print(errorMessage)
+                        // ユーザーに視覚的に通知したい場合、アラートを表示することも検討
+                        // self.saveAlertMessage = errorMessage
+                        // self.showingSaveAlert = true
                         self.navigateToConfirmation = true
                     }
                 }
 
-            } catch let error as NSError {
-                print("[CameraPreviewView] ❌ 写真保存失敗: \(error.localizedDescription) (Code: \(error.code))")
+            } catch let error as AlbumManager.PhotoError { // 特定のエラータイプで捕捉
+                print("[CameraPreviewView] ❌ 写真保存失敗 (AlbumManager.PhotoError): \(error.localizedDescription) (Code: \((error as NSError).code))")
                 DispatchQueue.main.async {
                     self.isSavingPhoto = false
-                    if error.domain == "FIRStorageErrorDomain" {
-                        self.saveAlertMessage = "写真のアップロードに失敗しました (コード: \(error.code))。\n\nネットワーク接続をご確認いただくか、アプリのカメラ・写真アクセス権限が許可されているかご確認ください。"
-                    } else if error.domain == "FIRFirestoreErrorDomain" {
-                        self.saveAlertMessage = "写真情報の保存に失敗しました (コード: \(error.code))。\n\nネットワーク接続をご確認いただくか、Firebaseのデータベース設定をご確認ください。"
-                    } else {
-                        self.saveAlertMessage = "写真の保存に失敗しました: \(error.localizedDescription)"
-                    }
+                    self.saveAlertMessage = error.localizedDescription // AlbumManager.PhotoErrorのerrorDescriptionを使用
                     self.showingSaveAlert = true
                 }
-            } catch {
-                print("[CameraPreviewView] ❌ 写真保存失敗: \(error.localizedDescription)")
+            } catch { // その他の不明なエラー
+                print("[CameraPreviewView] ❌ 写真保存失敗 (不明なエラー): \(error.localizedDescription)")
                 DispatchQueue.main.async {
                     self.isSavingPhoto = false
-                    self.saveAlertMessage = "写真の保存に失敗しました: \(error.localizedDescription)"
+                    self.saveAlertMessage = "写真の保存中に予期せぬエラーが発生しました: \(error.localizedDescription)"
                     self.showingSaveAlert = true
                 }
             }
         }
     }
 
-    func loadImage(named filename: String) -> UIImage? {
+    // MARK: - 堅牢性向上: アイコン読み込み関数を強化
+    func loadImageSafely(named filename: String) -> UIImage {
+        // まずアセットカタログからの読み込みを試行
         if let image = UIImage(named: filename) {
             return image
         }
+        // 次にドキュメントディレクトリからの読み込みを試行
         let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent(filename)
-        return UIImage(contentsOfFile: url.path)
+        if let image = UIImage(contentsOfFile: url.path) {
+            return image
+        }
+        
+        // どちらからも読み込めない場合、デフォルトのシステムアイコンを返す
+        print("[CameraPreviewView] ⚠️ アイコン '\(filename)' が見つかりませんでした。デフォルトアイコンを表示します。")
+        return UIImage(systemName: "person.circle.fill") ?? UIImage() // フォールバックとして空のUIImageも考慮
     }
 }
 

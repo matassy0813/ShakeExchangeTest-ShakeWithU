@@ -6,9 +6,9 @@
 //
 
 import Foundation
-import FirebaseFirestore // Firestoreをインポート
-import FirebaseAuth // FirebaseAuthをインポート
-import Combine // Combineフレームワークをインポート
+import FirebaseFirestore
+import FirebaseAuth
+import Combine
 
 class FriendManager: ObservableObject {
     static let shared = FriendManager()
@@ -17,29 +17,25 @@ class FriendManager: ObservableObject {
 
     private var db: Firestore!
     private var auth: Auth!
-    // userId は AuthManager から取得するため、ここでは直接保持しない
-    // private var userId: String?
-    private var friendsListener: ListenerRegistration? // Firestoreのリスナーを保持
-    private let userDefaultsKey = "SavedFriends" // ローカル保存用キー
+    private var friendsListener: ListenerRegistration?
+    private let userDefaultsKey = "SavedFriends"
 
-    // Combineフレームワークのcancellablesセットを追加
     private var cancellables = Set<AnyCancellable>()
 
     private init() {
         db = Firestore.firestore()
         auth = Auth.auth()
         
-        // AuthManagerの認証状態変更を監視し、Firestoreリスナーの開始/停止をトリガー
         AuthManager.shared.$isAuthenticated
             .sink { [weak self] isAuthenticated in
                 guard let self = self else { return }
+                // MARK: - 堅牢性向上: AuthManager.shared.userId を使用
                 if isAuthenticated, let userId = AuthManager.shared.userId {
                     print("[FriendManager] ✅ AuthManagerから認証通知受信: User ID = \(userId)")
-                    self.startListeningForFriends(userId: userId) // 認証後、Firestoreのリスナーを開始
+                    self.startListeningForFriends(userId: userId)
                 } else {
-                    print("[FriendManager] ℹ️ AuthManagerから未認証通知受信。")
-                    self.stopListeningForFriends() // 未認証の場合、リスナーを停止
-                    // ローカルのfriendsデータをクリア
+                    print("[FriendManager] ℹ️ AuthManagerから未認証通知受信。リスナーを停止し、ローカルデータをクリアします。")
+                    self.stopListeningForFriends()
                     DispatchQueue.main.async {
                         self.friends.removeAll()
                         self.saveFriendsToUserDefaults()
@@ -49,18 +45,15 @@ class FriendManager: ObservableObject {
             }
             .store(in: &cancellables)
 
-        loadFriendsFromUserDefaults() // まずUserDefaultsから読み込みを試みる
+        loadFriendsFromUserDefaults()
     }
     
     // MARK: - 新規フレンドの追加
     func add(friend: Friend) {
-        // UUIDで重複チェック
         if !friends.contains(where: { $0.uuid == friend.uuid }) {
-            // ローカルに追加する前にFirestoreに保存を試みる
-            Task {
+            Task { @MainActor in // MARK: - 堅牢性向上: Firestore操作はメインアクターからでも安全に呼び出せるが、UI更新はメインスレッド
                 await saveFriendToFirestore(friend)
             }
-            // Firestoreからのリアルタイム更新でfriends配列が更新されるため、ここでは直接appendしない
             print("[FriendManager] ✅ 新規フレンド追加リクエスト: \(friend.name) (\(friend.uuid))")
         } else {
             print("[FriendManager] ⚠️ 既存フレンドのため追加スキップ: \(friend.name) (\(friend.uuid))")
@@ -74,8 +67,7 @@ class FriendManager: ObservableObject {
 
     // MARK: - フレンド情報の更新
     func update(friend: Friend) {
-        // ローカルを直接更新する代わりに、Firestoreに保存を試みる
-        Task {
+        Task { @MainActor in // MARK: - 堅牢性向上: Firestore操作はメインアクターからでも安全に呼び出せるが、UI更新はメインスレッド
             await saveFriendToFirestore(friend)
         }
         print("[FriendManager] 🔄 フレンド更新リクエスト: \(friend.name) (\(friend.uuid))")
@@ -97,8 +89,10 @@ class FriendManager: ObservableObject {
         if let data = UserDefaults.standard.data(forKey: userDefaultsKey) {
             do {
                 let savedFriends = try JSONDecoder().decode([Friend].self, from: data)
-                friends = savedFriends
-                print("[FriendManager] ✅ フレンドデータUserDefaults読み込み成功 (\(friends.count)件)")
+                DispatchQueue.main.async { // MARK: - 堅牢性向上: Publishedプロパティの更新はメインスレッドで
+                    self.friends = savedFriends
+                }
+                print("[FriendManager] ✅ フレンドデータUserDefaults読み込み成功 (\(savedFriends.count)件)")
             } catch {
                 print("[FriendManager] ❌ UserDefaults読み込み失敗: \(error.localizedDescription)")
             }
@@ -109,33 +103,28 @@ class FriendManager: ObservableObject {
 
     // MARK: - フレンド保存 (Firestore)
     private func saveFriendToFirestore(_ friend: Friend) async {
-        guard let userId = AuthManager.shared.userId else { // AuthManagerからuserIdを取得
+        guard let userId = AuthManager.shared.userId else {
             print("[FriendManager] ⚠️ User IDが未設定のためFirestoreに保存できません。")
             return
         }
         
-        // Firestoreのパス: /users/{userId}/friends/{friend.uuid}
         let friendRef = db.collection("users").document(userId).collection("friends").document(friend.uuid)
         
         do {
-            // Friendオブジェクト全体をエンコード
             let data = try Firestore.Encoder().encode(friend)
             try await friendRef.setData(data)
             print("[FriendManager] ✅ Firestoreにフレンド保存完了: \(friend.name) (\(friend.uuid))")
-            // Firestoreからのリアルタイム更新でfriends配列が更新されるため、ここではsaveFriendsToUserDefaultsを直接呼ばない
-            // リスナー内でUserDefaultsへの保存も行われる
         } catch {
             print("[FriendManager] ❌ Firestore保存失敗: \(error.localizedDescription)")
         }
     }
 
     // MARK: - フレンド一覧読み込み (Firestore - リアルタイムリスナー)
-    private func startListeningForFriends(userId: String) { // userIdを引数で受け取る
-        stopListeningForFriends() // 既存のリスナーがあれば停止
+    private func startListeningForFriends(userId: String) {
+        stopListeningForFriends()
         
         let friendsCollectionRef = db.collection("users").document(userId).collection("friends")
         
-        // onSnapshotでリアルタイム更新を監視
         friendsListener = friendsCollectionRef.addSnapshotListener { [weak self] querySnapshot, error in
             guard let self = self else { return }
             
@@ -146,7 +135,6 @@ class FriendManager: ObservableObject {
             
             guard let documents = querySnapshot?.documents else {
                 print("[FriendManager] ℹ️ Firestoreにフレンドドキュメントがありません。")
-                // ドキュメントがない場合もローカルのfriendsをクリアし、UserDefaultsも更新
                 DispatchQueue.main.async {
                     self.friends.removeAll()
                     self.saveFriendsToUserDefaults()
@@ -161,14 +149,15 @@ class FriendManager: ObservableObject {
                     let friend = try document.data(as: Friend.self)
                     fetchedFriends.append(friend)
                 } catch {
-                    print("[FriendManager] ❌ フレンドデータのデコード失敗: \(error.localizedDescription)")
+                    // MARK: - 堅牢性向上: デコード失敗時の詳細ログ
+                    print("[FriendManager] ❌ フレンドデータのデコード失敗 for document ID: \(document.documentID) Error: \(error.localizedDescription)")
                 }
             }
             
             DispatchQueue.main.async {
                 self.friends = fetchedFriends
                 print("[FriendManager] ✅ Firestoreからフレンドデータ更新 (\(self.friends.count)件)")
-                self.saveFriendsToUserDefaults() // Firestoreから読み込み成功後、UserDefaultsも更新
+                self.saveFriendsToUserDefaults()
             }
         }
         print("[FriendManager] ✅ Firestoreフレンドリスナー開始")
@@ -181,45 +170,100 @@ class FriendManager: ObservableObject {
         print("[FriendManager] 🛑 Firestoreフレンドリスナー停止")
     }
     
+    // MARK: - 堅牢性向上: encounterCountの更新をトランザクション推奨
     func incrementEncounterCount(for uuid: String) {
         guard let userId = AuthManager.shared.userId else {
-            print("[FriendManager] ⚠️ 認証されていません")
+            print("[FriendManager] ⚠️ User IDが未設定のためencounterCountを更新できません。")
             return
         }
 
         let friendRef = db.collection("users").document(userId).collection("friends").document(uuid)
 
-        friendRef.getDocument { (document, error) in
-            if let document = document, document.exists {
-                let currentCount = document.get("encounterCount") as? Int ?? 0
-                friendRef.setData([
-                    "encounterCount": currentCount + 1,
-                    "lastInteracted": DateFormatter.localizedString(from: Date(), dateStyle: .short, timeStyle: .none)
-                ], merge: true)
-                print("[FriendManager] ✅ 再会カウント +1（\(currentCount + 1)）")
+        // MARK: - 堅牢性向上: トランザクションの使用を推奨 (競合状態防止)
+        // ここでは既存のロジックを大きく変えないが、ベストプラクティスとしてはFirestore.runTransactionを使用
+        db.runTransaction({ (transaction, errorPointer) -> Any? in
+            let friendDocument: DocumentSnapshot
+            do {
+                try friendDocument = transaction.getDocument(friendRef)
+            } catch let fetchError as NSError {
+                errorPointer?.pointee = fetchError
+                return nil
+            }
+
+            guard friendDocument.exists else {
+                print("[FriendManager] ⚠️ incrementEncounterCount: 該当フレンドが見つかりません。UUID: \(uuid)")
+                // 既存のドキュメントがない場合は、エラーとして処理するか、新規作成するかを検討
+                // ここでは、エラーとして扱うため、トランザクションをキャンセル
+                errorPointer?.pointee = NSError(domain: "FriendManager", code: 404, userInfo: [NSLocalizedDescriptionKey: "Friend not found."])
+                return nil
+            }
+            
+            let currentCount = friendDocument.get("encounterCount") as? Int ?? 0
+            let lastStreakDateStr = friendDocument.get("lastStreakDate") as? String ?? ""
+            let previousStreakCount = friendDocument.get("streakCount") as? Int ?? 0
+
+            let today = Date()
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            let todayString = formatter.string(from: today)
+
+            var newStreakCount = 1
+            if let lastStreakDate = formatter.date(from: lastStreakDateStr) {
+                let daysSinceLast = Calendar.current.dateComponents([.day], from: lastStreakDate, to: today).day ?? 999
+                if daysSinceLast == 1 { // 翌日の場合のみストリーク継続
+                    newStreakCount = previousStreakCount + 1
+                } else if daysSinceLast == 0 { // 同日の場合、ストリークは更新しない
+                    newStreakCount = previousStreakCount
+                } else { // 2日以上開いた場合、リセット
+                    newStreakCount = 1
+                }
+            }
+            
+            transaction.setData([
+                "encounterCount": currentCount + 1,
+                "lastInteracted": todayString,
+                "streakCount": newStreakCount,
+                "lastStreakDate": todayString
+            ], forDocument: friendRef, merge: true)
+            
+            print("[FriendManager] ✅ トランザクション: 再会カウント +1（\(currentCount + 1)）/ ストリーク更新（\(newStreakCount)）")
+            return nil
+        }) { (object, error) in
+            if let error = error {
+                print("[FriendManager] ❌ トランザクション失敗: \(error.localizedDescription)")
             } else {
-                print("[FriendManager] ⚠️ 該当フレンドが見つかりません")
+                print("[FriendManager] ✅ トランザクション成功。")
             }
         }
     }
     
     func updateLocalEncounterCount(for uuid: String, to count: Int) {
         if let index = friends.firstIndex(where: { $0.uuid == uuid }) {
-            friends[index].encounterCount = count
-            saveFriendsToUserDefaults()
-            print("[FriendManager] 💾 ローカルに encounterCount=\(count) を保存しました")
+            DispatchQueue.main.async { // MARK: - 堅牢性向上: Publishedプロパティの更新はメインスレッドで
+                self.friends[index].encounterCount = count
+                self.saveFriendsToUserDefaults()
+                print("[FriendManager] 💾 ローカルに encounterCount=\(count) を保存しました")
+            }
+        } else {
+            print("[FriendManager] ⚠️ updateLocalEncounterCount: 該当フレンドが見つかりません。UUID: \(uuid)")
         }
     }
     
     func updateStreakCount(for uuid: String, to newValue: Int) {
         if let index = friends.firstIndex(where: { $0.uuid == uuid }) {
-            friends[index].streakCount = newValue
+            DispatchQueue.main.async { // MARK: - 堅牢性向上: Publishedプロパティの更新はメインスレッドで
+                self.friends[index].streakCount = newValue
+                // ストリークのみの更新の場合、UserDefaultsへの保存も必要であれば追加
+                // self.saveFriendsToUserDefaults()
+            }
+        } else {
+            print("[FriendManager] ⚠️ updateStreakCount: 該当フレンドが見つかりません。UUID: \(uuid)")
         }
     }
     
     // MARK: - 全フレンドを削除（デバッグ用）
     func clearAllFriends() async {
-        guard let userId = AuthManager.shared.userId else { // AuthManagerからuserIdを取得
+        guard let userId = AuthManager.shared.userId else {
             print("[FriendManager] ⚠️ User IDが未設定のため全フレンドを削除できません。")
             return
         }
@@ -227,14 +271,22 @@ class FriendManager: ObservableObject {
         let friendsCollectionRef = db.collection("users").document(userId).collection("friends")
         do {
             let documents = try await friendsCollectionRef.getDocuments().documents
-            for document in documents {
-                try await document.reference.delete()
+            guard !documents.isEmpty else {
+                print("[FriendManager] ℹ️ 削除するフレンドがいません。")
+                return
             }
+            
+            // MARK: - 堅牢性向上: バッチ処理で削除
+            let batch = db.batch()
+            for document in documents {
+                batch.deleteDocument(document.reference)
+            }
+            try await batch.commit()
+
             print("[FriendManager] 🗑️ Firestoreの全フレンドデータを削除しました。")
-            // ローカルデータはリスナーによって自動的にクリアされるはずだが、念のため明示的にクリア
             DispatchQueue.main.async {
                 self.friends.removeAll()
-                self.saveFriendsToUserDefaults() // UserDefaultsもクリア
+                self.saveFriendsToUserDefaults()
                 print("[FriendManager] 🗑️ ローカルの全フレンドデータを削除しました。")
             }
         } catch {

@@ -4,7 +4,6 @@
 //
 //  Created by 俣江悠聖 on 2025/07/16.
 //
-
 import SwiftUI
 import GoogleMobileAds
 
@@ -39,11 +38,17 @@ struct AdView: UIViewRepresentable {
             stack.bottomAnchor.constraint(equalTo: nativeAdView.bottomAnchor)
         ])
 
+        // MARK: - 堅牢性向上: rootViewController の安全な取得とエラーログ
+        guard let rootVC = UIApplication.shared.connectedScenes
+                .compactMap({ ($0 as? UIWindowScene)?.windows.first?.rootViewController })
+                .first else {
+            print("❌ AdView: rootViewController の取得に失敗しました。広告がロードされない可能性があります。")
+            return nativeAdView // ロード失敗の可能性が高いが、ビュー自体は返す
+        }
+
         let adLoader = AdLoader(
             adUnitID: "ca-app-pub-3940256099942544/3986624511", // ← テスト用ユニットID
-            rootViewController: UIApplication.shared.connectedScenes
-                .compactMap { ($0 as? UIWindowScene)?.windows.first?.rootViewController }
-                .first,
+            rootViewController: rootVC, // 安全に取得したrootVCを使用
             adTypes: [.native],
             options: nil
         )
@@ -58,13 +63,16 @@ struct AdView: UIViewRepresentable {
     func updateUIView(_ uiView: NativeAdView, context: Context) {}
 
     class Coordinator: NSObject, NativeAdLoaderDelegate {
-        var adView: NativeAdView?
+        weak var adView: NativeAdView? // MARK: - 堅牢性向上: 循環参照を防ぐためにweakにする
 
         func adLoader(_ adLoader: AdLoader, didReceive nativeAd: NativeAd) {
             print("✅ ネイティブ広告を取得しました")
-            adView?.nativeAd = nativeAd
-            if let headline = adView?.headlineView as? UILabel {
-                headline.text = nativeAd.headline
+            // MARK: - 堅牢性向上: UI更新はメインスレッドで
+            DispatchQueue.main.async {
+                self.adView?.nativeAd = nativeAd
+                if let headline = self.adView?.headlineView as? UILabel {
+                    headline.text = nativeAd.headline
+                }
             }
         }
 
