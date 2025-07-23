@@ -63,6 +63,8 @@ struct ContentView: View {
                         Text("Ranking")
                     }
             }
+            .background(Color.black.ignoresSafeArea()) // 🔥 全体黒ベースに
+            .tint(.white)
         } else if authManager.isAuthenticated && !authManager.hasAgreedToTerms {
             // 認証済みだが、利用規約に同意していない場合、同意画面を強制表示
             TermsAndPrivacyConsentView(isPresented: .constant(true)) // 強制表示のため .constant(true)

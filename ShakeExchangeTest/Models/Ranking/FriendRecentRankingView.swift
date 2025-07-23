@@ -13,29 +13,34 @@ struct FriendRecentRankingView: View {
     @State private var selectedTab = 0
 
     var body: some View {
-        VStack {
-            Picker(selection: $selectedTab, label: Text("ランキングタイプ")) {
-                Text("最近1週間").tag(0)
-                Text("全期間").tag(1)
+        ZStack{
+            Color.black.ignoresSafeArea()
+            VStack {
+                Picker(selection: $selectedTab, label: Text("ランキングタイプ")) {
+                    Text("最近1週間").tag(0)
+                    Text("全期間").tag(1)
+                }
+                .pickerStyle(SegmentedPickerStyle())
+                .padding(.horizontal)
+                
+                if selectedTab == 0 {
+                    RankingListView(friends: manager.topFriends, title: "👑 最近よく会ってる人 TOP5")
+                        .onAppear {
+                            manager.fetchTopFriends(from: friendManager.friends)
+                        }
+                } else {
+                    RankingListView(friends: manager.allTimeTopFriends, title: "🏆 全期間の再会 TOP5")
+                        .onAppear {
+                            manager.fetchAllTimeTopFriends(from: friendManager.friends)
+                        }
+                }
+                
+                Spacer()
             }
-            .pickerStyle(SegmentedPickerStyle())
-            .padding(.horizontal)
-
-            if selectedTab == 0 {
-                RankingListView(friends: manager.topFriends, title: "👑 最近よく会ってる人 TOP5")
-                    .onAppear {
-                        manager.fetchTopFriends(from: friendManager.friends)
-                    }
-            } else {
-                RankingListView(friends: manager.allTimeTopFriends, title: "🏆 全期間の再会 TOP5")
-                    .onAppear {
-                        manager.fetchAllTimeTopFriends(from: friendManager.friends)
-                    }
-            }
-
-            Spacer()
+            .foregroundColor(.white)
+            .padding()
         }
-        .padding()
+        
     }
 }
 
@@ -47,13 +52,18 @@ struct RankingListView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text(title)
                 .font(.title2.bold())
+                .foregroundColor(.white)
 
             if friends.isEmpty {
                 Text("🥲 まだ十分なデータがありません…\nもっと交流してみて！")
                     .font(.headline)
                     .multilineTextAlignment(.center)
-                    .foregroundColor(.gray)
+                    .foregroundColor(.white.opacity(0.6))
                     .padding()
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.white.opacity(0.03))
+                    )
             } else {
                 ForEach(friends.indices, id: \.self) { index in
                     let friend = friends[index]
@@ -78,9 +88,10 @@ struct RankingListView: View {
                         VStack(alignment: .leading) {
                             Text(friend.nickname)
                                 .font(.headline)
+                                .foregroundColor(.white)
                             Text("再会 \(friend.encounterCount ?? 0) 回")
                                 .font(.subheadline)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(.white.opacity(0.6))
                         }
 
                         Spacer()
@@ -88,8 +99,18 @@ struct RankingListView: View {
                     .padding()
                     .background(
                         RoundedRectangle(cornerRadius: 12)
-                            .fill(LinearGradient(gradient: Gradient(colors: [rankColor(index).opacity(0.2), Color.white.opacity(0.1)]), startPoint: .topLeading, endPoint: .bottomTrailing))
-                            .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 3)
+                            .fill(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [rankColor(index).opacity(0.2), Color.black.opacity(0.3)]),
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                            )
+                            .shadow(color: Color.white.opacity(0.05), radius: 4, x: 0, y: 2)
                     )
                 }
             }

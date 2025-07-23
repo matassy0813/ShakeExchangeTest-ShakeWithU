@@ -49,14 +49,15 @@ struct FriendsListView: View {
                 HStack {
                     Text("Friends")
                         .font(.largeTitle)
-                        .fontWeight(.bold)
+                        .foregroundColor(.white)
                     Spacer()
                     Picker("Sort", selection: $sortOption) {
                         ForEach(SortOption.allCases, id: \.self) { option in
                             Text(option.rawValue).tag(option)
                         }
                     }
-                    .pickerStyle(MenuPickerStyle())
+                    .pickerStyle(.menu)
+                    .tint(.white)
                 }
                 .padding(.horizontal)
                 
@@ -67,6 +68,7 @@ struct FriendsListView: View {
                         Text(friend.name).searchCompletion(friend.name)
                     }
                 }
+                .foregroundColor(.white) 
 
                 // リスト
                 ScrollView {
@@ -90,6 +92,7 @@ struct FriendsListView: View {
                     .padding(.top)
                 }
             }
+            .background(Color.black.ignoresSafeArea())
             .navigationTitle("") // カスタムタイトルを使用するため空にする
             .navigationBarHidden(true) // カスタムタイトルを使用するため非表示にする
         }

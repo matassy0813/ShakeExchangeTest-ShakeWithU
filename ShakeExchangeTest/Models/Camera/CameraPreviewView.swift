@@ -33,16 +33,24 @@ struct CameraPreviewView: View {
 
     var body: some View {
         VStack(spacing: 20) {
-            Text("Send Photo")
-                .font(.title)
-                .bold()
+            Text("Show to tap! and send Photo!")
+                .font(.title2.weight(.semibold))
+                .foregroundColor(.white)
+                .padding(.top)
 
             ZStack(alignment: .topTrailing) {
                 Group {
+//                    Image(uiImage: mainImage)
+//                        .resizable()
+//                        .aspectRatio(contentMode: .fit)
+//                        .cornerRadius(12)
+//                        .matchedGeometryEffect(id: "mainImage", in: imageSwap)
                     Image(uiImage: mainImage)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
-                        .cornerRadius(12)
+                        .cornerRadius(20)
+                        .shadow(color: .white.opacity(0.2), radius: 10, x: 0, y: 4)
+                        .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.1), lineWidth: 1))
                         .matchedGeometryEffect(id: "mainImage", in: imageSwap)
                 }
                 .onTapGesture {
@@ -50,10 +58,17 @@ struct CameraPreviewView: View {
                 }
 
                 Group {
+//                    Image(uiImage: subImage)
+//                        .resizable()
+//                        .frame(width: 80, height: 80)
+//                        .clipShape(RoundedRectangle(cornerRadius: 12))
+//                        .padding(8)
+//                        .matchedGeometryEffect(id: "subImage", in: imageSwap)
                     Image(uiImage: subImage)
                         .resizable()
                         .frame(width: 80, height: 80)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .shadow(color: .white.opacity(0.3), radius: 6)
                         .padding(8)
                         .matchedGeometryEffect(id: "subImage", in: imageSwap)
                 }
@@ -72,11 +87,12 @@ struct CameraPreviewView: View {
                 Button("戻る") {
                     presentationMode.wrappedValue.dismiss()
                 }
-                .padding()
+                .font(.headline)
+                .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
-                .background(Color.gray.opacity(0.2))
-                .foregroundColor(.gray)
-                .cornerRadius(10)
+                .padding()
+                .background(Color.white.opacity(0.1))
+                .cornerRadius(12)
 
                 Button(action: {
                     savePhotoToCloud()
@@ -86,13 +102,18 @@ struct CameraPreviewView: View {
                             .progressViewStyle(CircularProgressViewStyle(tint: .white))
                     } else {
                         Text("Send")
+                            .font(.headline)
+                            .foregroundColor(.white)
                     }
                 }
-                .padding()
                 .frame(maxWidth: .infinity)
-                .background(Color.blue)
-                .foregroundColor(.white)
-                .cornerRadius(10)
+                .padding()
+                .background(LinearGradient(
+                    gradient: Gradient(colors: [Color.purple, Color.blue]),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing))
+                .cornerRadius(12)
+                .shadow(color: Color.blue.opacity(0.3), radius: 10)
                 .disabled(isSavingPhoto)
             }
             .padding(.horizontal)
@@ -104,6 +125,7 @@ struct CameraPreviewView: View {
                     .resizable()
                     .clipShape(Circle())
                     .frame(width: 60, height: 60)
+                    .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 1))
 
                 Image(systemName: "arrow.right")
                     .foregroundColor(.gray)
@@ -113,14 +135,17 @@ struct CameraPreviewView: View {
                     .resizable()
                     .clipShape(Circle())
                     .frame(width: 60, height: 60)
+                    .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 1))
 
                 Text(friendName)
-                    .font(.subheadline)
+                    .font(.footnote)
+                    .foregroundColor(.white.opacity(0.7))
             }
 
             Spacer()
         }
         .padding()
+        .background(Color.black.ignoresSafeArea())
         .alert(isPresented: $showingSaveAlert) {
             Alert(title: Text("エラー"), message: Text(saveAlertMessage), dismissButton: .default(Text("OK")))
         }

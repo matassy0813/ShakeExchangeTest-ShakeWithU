@@ -20,7 +20,7 @@ struct ProfileView: View {
                             .scaledToFill()
                             .frame(width: 100, height: 100)
                             .clipShape(Circle())
-                            .shadow(radius: 4)
+                            .shadow(color: .white.opacity(0.2), radius: 8)
                     } else {
                         // アイコンが読み込めない場合のフォールバック（システムアイコン）
                         Image(systemName: "person.crop.circle.fill")
@@ -49,12 +49,12 @@ struct ProfileView: View {
                         Link(destination: url) {
                             Text(profileManager.currentUser.link)
                                 .font(.subheadline)
-                                .foregroundColor(.blue)
                                 .padding(8)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 8)
-                                        .stroke(Color.blue, lineWidth: 1)
+                                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
                                 )
+                                .foregroundColor(.white.opacity(0.8))
                         }
                     } else if !profileManager.currentUser.link.isEmpty {
                         // 無効なURLだが空ではない場合（リンクとしてタップできないがテキストは表示）
@@ -78,7 +78,7 @@ struct ProfileView: View {
                         }
 
                         ProgressView(value: Double(profileManager.currentUser.challengeStatus), total: 30)
-                            .progressViewStyle(LinearProgressViewStyle(tint: .black))
+                            .progressViewStyle(LinearProgressViewStyle(tint: .white))
 
                         Text("\(profileManager.currentUser.challengeStatus) / 30")
                             .font(.caption)
@@ -102,12 +102,14 @@ struct ProfileView: View {
                     }
                 }
                 .padding()
+                .background(Color.black) // 🔥 背景黒
+                .foregroundColor(.white)
             }
             .navigationTitle("Profile")
             .navigationBarItems(trailing:
                 NavigationLink(destination: ProfileEditView(user: $profileManager.currentUser)) {
                     Text("Edit")
-                        .foregroundColor(.blue)
+                        .foregroundColor(.white)
                 }
             )
         }

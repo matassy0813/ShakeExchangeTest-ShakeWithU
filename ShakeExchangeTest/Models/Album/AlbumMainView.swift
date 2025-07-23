@@ -41,6 +41,7 @@ struct AlbumMainView: View {
                                 .font(.title2) // フォントサイズを大きく
                                 .fontWeight(.bold)
                                 .padding(.leading, 8)
+                            
 
                             Spacer()
                             Image(systemName: "chevron.right")
@@ -50,19 +51,26 @@ struct AlbumMainView: View {
                         .padding()
                         .background(
                             RoundedRectangle(cornerRadius: 15) // 角を丸く
-                                .fill(Color.purple.opacity(0.1)) // 背景色を薄く
+                                .fill(
+                                    LinearGradient(
+                                        gradient: Gradient(colors: [Color.purple.opacity(0.3), Color.black]),
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .shadow(color: .purple.opacity(0.3), radius: 10)
                                 .shadow(color: .black.opacity(0.08), radius: 5, x: 0, y: 3) // 控えめなシャドウ
                         )
-                        .foregroundColor(.primary) // テキスト色をシステムデフォルトに
+                        .foregroundColor(.white)
                     }
                     .padding(.horizontal) // 横パディング
 
                     // 友達のアルバム一覧
                     VStack(alignment: .leading, spacing: 16) { // スペーシングを調整
                         Text("Friend Albums")
-                            .font(.title2) // フォントサイズを調整
-                            .bold()
-                            .padding(.horizontal) // 横パディング
+                            .font(.title2.bold())
+                            .foregroundColor(.white)
+                            .padding(.horizontal)
 
                         if friendManager.friends.isEmpty {
                             ContentUnavailableView(
@@ -70,6 +78,7 @@ struct AlbumMainView: View {
                                 systemImage: "person.3.fill",
                                 description: Text("Shake to connect with friends and see their albums here!")
                             )
+                            .foregroundColor(.white.opacity(0.7))
                             .frame(height: 150) // 高さ指定
                             .padding(.horizontal)
                         } else {
@@ -96,16 +105,17 @@ struct AlbumMainView: View {
                     // 最近の写真（自分のアルバムの最新6枚）
                     VStack(alignment: .leading, spacing: 16) { // スペーシングを調整
                         Text("Recent Photos")
-                            .font(.title2) // フォントサイズを調整
-                            .bold()
-                            .padding(.horizontal) // 横パディング
+                            .font(.title2.bold())
+                            .foregroundColor(.white)
+                            .padding(.horizontal)
 
                         if isLoadingMyRecentPhotos {
                             ProgressView("Loading recent photos...")
                                 .padding()
+                                .foregroundColor(.white.opacity(0.7))
                         } else if let error = myRecentPhotosErrorMessage {
                             Text("Error loading recent photos: \(error)")
-                                .foregroundColor(.red)
+                                .foregroundColor(.white.opacity(0.7))
                                 .padding()
                         } else if myRecentPhotos.isEmpty {
                             ContentUnavailableView(
@@ -113,6 +123,7 @@ struct AlbumMainView: View {
                                 systemImage: "photo.fill.on.rectangle.fill",
                                 description: Text("Take photos with your friends to see them here!")
                             )
+                            .foregroundColor(.white.opacity(0.7))
                             .frame(height: 150) // 高さ指定
                             .padding(.horizontal)
                         } else {
@@ -133,7 +144,8 @@ struct AlbumMainView: View {
                 .padding(.vertical) // 全体の縦パディング
             }
             .navigationTitle("Albums")
-            .navigationBarTitleDisplayMode(.large) // タイトルを大きく
+            .navigationBarTitleDisplayMode(.large)
+            .background(Color.black)
         }
         .onAppear {
             loadMyRecentPhotos()

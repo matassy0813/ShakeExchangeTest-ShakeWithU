@@ -73,7 +73,10 @@ struct FriendProfileView: View {
                 }
             }
             .padding(.vertical)
+            .background(Color.black)
         }
+        .foregroundColor(.white)
+        .navigationBarTitleDisplayMode(.inline)
         .navigationTitle("Friend Profile")
         .onAppear {
             loadMyPhotosWithFriend()

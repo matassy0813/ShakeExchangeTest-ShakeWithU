@@ -56,25 +56,27 @@ struct SocialNetworkView: View {
 
     var body: some View {
         ZStack {
-            Color.white.ignoresSafeArea() // 背景色
+            Color.black.ignoresSafeArea()  // 背景色
 
             if networkGraphManager.isLoading {
                 ProgressView("Building Network...")
                     .progressViewStyle(CircularProgressViewStyle())
                     .scaleEffect(1.5)
-                    .foregroundColor(.blue)
+                    .foregroundColor(.white)
             } else if networkGraphManager.errorMessage != nil {
                 ContentUnavailableView(
                     "Error Loading Network",
                     systemImage: "exclamationmark.triangle.fill",
                     description: Text(networkGraphManager.errorMessage ?? "An unknown error occurred.")
                 )
+                .foregroundColor(.white)
             }
             else if networkGraphManager.socialNetworkGraph.nodes.isEmpty {
                 ContentUnavailableView(
                     "No Network Yet",
                     systemImage: "network",
                     description: Text("Shake your phone with someone to start building your network!")
+                        .foregroundColor(.white)
                 )
             } else {
                 GeometryReader { geometry in
@@ -122,7 +124,7 @@ struct SocialNetworkView: View {
                                     path.move(to: sourcePosition)
                                     path.addLine(to: targetPosition)
                                     
-                                    context.stroke(path, with: .color(Color.gray.opacity(0.5)), lineWidth: 1)
+                                    context.stroke(path, with: .color(Color.white.opacity(0.1)), lineWidth: 0.5)
                                 }
                             }
                         }
@@ -160,7 +162,9 @@ struct SocialNetworkView: View {
                         VStack {
                             ZStack {
                                 Circle()
-                                    .fill(displayNode.isCurrentUser ? Color.blue.opacity(0.2) : Color.purple.opacity(0.1))
+                                    .fill(displayNode.isCurrentUser ? Color.white.opacity(0.08) : Color.white.opacity(0.03))
+                                    .overlay(Circle().stroke(Color.white.opacity(0.3), lineWidth: 1.5))
+                                    .shadow(color: .white.opacity(0.1), radius: 4)
                                     .frame(width: displayNode.isCurrentUser ? currentUserNodeSize : nodeSize,
                                            height: displayNode.isCurrentUser ? currentUserNodeSize : nodeSize)
                                     .overlay(
@@ -198,7 +202,7 @@ struct SocialNetworkView: View {
                                 Text(displayNode.name)
                                     .font(displayNode.isCurrentUser ? .headline : (displayNode.distance == 1 ? .subheadline : .caption))
                                     .fontWeight(displayNode.isCurrentUser ? .bold : .regular)
-                                    .foregroundColor(.black)
+                                    .foregroundColor(.white)
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.7)
                                     .frame(width: displayNode.isCurrentUser ? currentUserNodeSize + 20 : nodeSize + 10) // 名前がはみ出さないように幅を調整

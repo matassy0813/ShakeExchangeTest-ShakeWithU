@@ -27,6 +27,7 @@ struct FeedView: View {
                             description: Text("Connect with friends and take photos to see them here!")
                         )
                         .padding(.top, 50)
+                        .foregroundColor(.gray)
                     } else {
                         ForEach(feedManager.feed) { item in
                             switch item {
@@ -35,14 +36,20 @@ struct FeedView: View {
                             case .ad:
                                 AdView()
                                     .frame(height: 200)
-                                    .background(Color.yellow.opacity(0.2))
+                                    .background(
+                                        LinearGradient(
+                                            gradient: Gradient(colors: [Color.yellow.opacity(0.2), Color.white.opacity(0.05)]),
+                                            startPoint: .top,
+                                            endPoint: .bottom)
+                                    )
                                     .cornerRadius(12)
-                                    .padding(.vertical, 10)
+                                    .shadow(color: .yellow.opacity(0.1), radius: 6)
                             }
                         }
                     }
                 }
                 .padding()
+                .foregroundColor(.white) // 全体白基調に
             }
             // MARK: - Pull-to-Refresh 機能を追加
             .refreshable {
@@ -54,6 +61,7 @@ struct FeedView: View {
                     print("[FeedView] ℹ️ Pull-to-Refresh: 未認証のためフィード更新をスキップします。")
                 }
             }
+            .background(Color.black.ignoresSafeArea())
             .navigationTitle("Feed")
 //            .navigationBarItems(
 //                leading: Image(systemName: "camera"), // カメラアイコン

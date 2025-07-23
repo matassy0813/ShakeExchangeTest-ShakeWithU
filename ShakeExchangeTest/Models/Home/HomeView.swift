@@ -14,6 +14,7 @@ struct HomeView: View {
     var body: some View {
         NavigationView {
             FeedView() // ← FeedView を使う
+                .background(Color.black)
                 .navigationTitle("Shake")
                 .navigationBarItems(
                     // カメラボタンと紙飛行機ボタンを削除
@@ -22,11 +23,19 @@ struct HomeView: View {
                             showingTerms = true
                         }) {
                             Text("規約")
-                                .font(.caption)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(Capsule().fill(Color.blue.opacity(0.1)))
-                                .foregroundColor(.blue)
+                                .font(.caption2)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(
+                                    Capsule().fill(
+                                        LinearGradient(
+                                            gradient: Gradient(colors: [Color.purple.opacity(0.3), Color.blue.opacity(0.3)]),
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                )
+                                .foregroundColor(.white)
                         }
                         .sheet(isPresented: $showingTerms) {
                             TermsAndPrivacyView(documentType: .terms)
@@ -36,11 +45,19 @@ struct HomeView: View {
                             showingPrivacy = true
                         }) {
                             Text("PP") // Privacy Policy の略
-                                .font(.caption)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(Capsule().fill(Color.purple.opacity(0.1)))
-                                .foregroundColor(.purple)
+                                .font(.caption2)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(
+                                    Capsule().fill(
+                                        LinearGradient(
+                                            gradient: Gradient(colors: [Color.pink.opacity(0.3), Color.orange.opacity(0.3)]),
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                )
+                                .foregroundColor(.white)
                         }
                         .sheet(isPresented: $showingPrivacy) {
                             TermsAndPrivacyView(documentType: .privacy)
@@ -48,6 +65,7 @@ struct HomeView: View {
                     }
                 )
         }
+        .navigationViewStyle(StackNavigationViewStyle())
     }
 }
 

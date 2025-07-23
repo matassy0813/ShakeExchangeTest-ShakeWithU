@@ -16,21 +16,27 @@ struct FriendHeaderView: View {
                     .resizable()
                     .frame(width: 100, height: 100)
                     .clipShape(Circle())
+                    .overlay(Circle().stroke(Color.white.opacity(0.1), lineWidth: 1))
+                    .shadow(color: .white.opacity(0.2), radius: 6)
             } else {
                 Image(friend.icon)
                     .resizable()
                     .frame(width: 100, height: 100)
                     .clipShape(Circle())
+                    .overlay(Circle().stroke(Color.white.opacity(0.1), lineWidth: 1))
+                    .shadow(color: .white.opacity(0.2), radius: 6)
             }
 
             Text(friend.name)
-                .font(.title2)
-                .bold()
+                .font(.title2.bold())
+                .foregroundColor(.white)
 
             Text("@\(friend.uuid)")
                 .font(.caption)
                 .foregroundColor(.gray)
         }
+        .padding(.top, 16)
+        .background(Color.black)
     }
 
     private func loadUserIcon(named filename: String) -> UIImage? {

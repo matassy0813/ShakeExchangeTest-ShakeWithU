@@ -69,9 +69,19 @@ struct FriendCardView: View {
                 .foregroundColor(.gray)
         }
         .padding()
-        .background(Color.purple.opacity(0.08))
-        .cornerRadius(12)
-        .padding(.horizontal)
+        .background(
+            LinearGradient(
+                gradient: Gradient(colors: [Color.white.opacity(0.05), Color.white.opacity(0.02)]),
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+        .cornerRadius(14)
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(Color.white.opacity(0.1), lineWidth: 0.5)
+        )
+        .shadow(color: .white.opacity(0.08), radius: 4, x: 0, y: 2)
     }
 
     func loadUserIcon(named filename: String) -> UIImage? {

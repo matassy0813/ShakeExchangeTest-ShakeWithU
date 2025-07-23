@@ -66,6 +66,10 @@ struct ProfileEditView: View {
                     Text("Name")
                     TextField("Enter name", text: $draftName)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .padding(10)
+                        .background(Color.white.opacity(0.05)) // グラス風マット
+                        .cornerRadius(8)
+                        .foregroundColor(.white)
                 }
                 
                 VStack(alignment: .leading) {
@@ -73,12 +77,20 @@ struct ProfileEditView: View {
                     TextField("About you", text: $draftDescription, axis: .vertical)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
                         .lineLimit(3...5)
+                        .padding(10)
+                        .background(Color.white.opacity(0.05)) // グラス風マット
+                        .cornerRadius(8)
+                        .foregroundColor(.white)
                 }
 
                 VStack(alignment: .leading) {
                     Text("Profile URL")
                     TextField("https://lit.link/yourname", text: $draftLink)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .padding(10)
+                        .background(Color.white.opacity(0.05)) // グラス風マット
+                        .cornerRadius(8)
+                        .foregroundColor(.white)
                 }
 
 
@@ -99,12 +111,21 @@ struct ProfileEditView: View {
                         .fontWeight(.bold)
                         .padding()
                         .frame(maxWidth: .infinity)
-                        .background(Color.blue)
+                        .background(
+                            LinearGradient(
+                                gradient: Gradient(colors: [Color.purple.opacity(0.6), Color.blue.opacity(0.6)]),
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .cornerRadius(12)
+                        .shadow(color: .purple.opacity(0.4), radius: 6)
                         .foregroundColor(.white)
-                        .cornerRadius(8)
                 }
             }
             .padding()
+            .background(Color.black) // ✨ 黒背景
+            .foregroundColor(.white) // ✨ 白文字
         }
     }
 

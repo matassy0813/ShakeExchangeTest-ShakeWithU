@@ -52,12 +52,18 @@ struct AlbumCardView: View {
         ZStack(alignment: .topTrailing) {
             // カードの背景とシャドウ
             RoundedRectangle(cornerRadius: 16) // 角をさらに丸く
-                .fill(Color.white)
-                .frame(width: 180, height: 220) // 少し高さを増やす
-                .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4) // シャドウを強調
+                .fill(
+                    LinearGradient(
+                        gradient: Gradient(colors: [Color.black.opacity(0.9), Color.black]),
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .frame(width: 180, height: 220)
+                .shadow(color: .white.opacity(0.08), radius: 10, x: 0, y: 5)
                 .overlay(
                     RoundedRectangle(cornerRadius: 16)
-                        .stroke(Color.gray.opacity(0.2), lineWidth: 0.5) // 細いボーダーを追加
+                        .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
                 )
 
             VStack(spacing: 0) { // スペーシングを調整
@@ -110,18 +116,18 @@ struct AlbumCardView: View {
                 // 日付とメモの表示
                 VStack(spacing: 4) {
                     Text(photo.date)
-                        .font(.caption) // フォントサイズを調整
-                        .fontWeight(.semibold) // 少し太く
-                        .foregroundColor(.black.opacity(0.8)) // 濃い目の黒
-                        .shadow(color: .black.opacity(0.05), radius: 0.5, x: 0, y: 0.5) // 控えめなシャドウ
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.white.opacity(0.9))
+                        .shadow(color: .black.opacity(0.5), radius: 1, x: 0, y: 1)
 
                     if !photo.note.isEmpty {
                         Text(photo.note)
-                            .font(.caption2) // さらに小さいフォント
-                            .foregroundColor(.gray.opacity(0.8)) // 控えめなグレー
-                            .lineLimit(1) // 1行に制限
-                            .truncationMode(.tail) // 超過したら...
-                            .padding(.horizontal, 8) // 横パディング
+                            .font(.caption2)
+                            .foregroundColor(.white.opacity(0.6))
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                            .padding(.horizontal, 8)
                     }
                 }
                 .frame(maxWidth: .infinity) // 幅いっぱいに広げる
@@ -135,7 +141,7 @@ struct AlbumCardView: View {
                     Image(systemName: "xmark.circle.fill")
                         .font(.title2) // アイコンを大きく
                         .foregroundColor(.red)
-                        .background(Circle().fill(Color.white).opacity(0.8)) // 白い背景で目立たせる
+                        .background(Circle().fill(Color.black.opacity(0.8)))
                         .clipShape(Circle())
                         .shadow(radius: 2)
                         .padding(4)
