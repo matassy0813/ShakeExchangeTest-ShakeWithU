@@ -75,6 +75,20 @@ struct ShakeButtonView: View {
 
                     // シェイクボタン
                     Button(action: {
+                        guard !MultipeerManager.shared.isCommunicating else {
+                            print("[ShakeButtonView] ⚠️ 通信中。ボタン無効。")
+                            return
+                        }
+                        
+                        // 新たに追加
+                        MultipeerManager.shared.isCommunicating = true
+                        print("[ShakeButtonView] → isCommunicating = true 設定")
+                        
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            MultipeerManager.shared.isCommunicating = false
+                            print("[ShakeButtonView] → isCommunicating = false 設定")
+                        }
+                        
                         animate = true
                         foundFriend = false
                         showBanner = false
@@ -147,6 +161,11 @@ struct ShakeButtonView: View {
                 receivedUser = nil
                 foundFriendName = ""
                 foundFriendImage = "profile_startImage"
+                
+                // ✅ 通信状態を完全に初期化
+                MultipeerManager.shared.stop()
+                MultipeerManager.shared.isHandshakeDetected = false
+                MultipeerManager.shared.isCommunicating = false
                 
                 print("[ShakeButtonView] 表示開始 & 状態初期化")
 

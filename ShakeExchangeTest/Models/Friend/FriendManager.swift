@@ -37,9 +37,9 @@ class FriendManager: ObservableObject {
                     print("[FriendManager] ℹ️ AuthManagerから未認証通知受信。リスナーを停止し、ローカルデータをクリアします。")
                     self.stopListeningForFriends()
                     DispatchQueue.main.async {
-                        self.friends.removeAll()
-                        self.saveFriendsToUserDefaults()
-                        print("[FriendManager] 🗑️ 未認証のためローカルのフレンドデータをクリアしました。")
+//                        self.friends.removeAll()
+//                        self.saveFriendsToUserDefaults()
+                        print("[FriendManager] 🗑️ 未認証を検知しました。")
                     }
                 }
             }
@@ -63,6 +63,10 @@ class FriendManager: ObservableObject {
     // MARK: - 既知フレンドかどうか判定
     func isExistingFriend(uuid: String) -> Bool {
         return friends.contains { $0.uuid == uuid }
+    }
+    
+    func getFriend(by uuid: String) -> Friend? {
+        return friends.first(where: { $0.uuid == uuid })
     }
 
     // MARK: - フレンド情報の更新
@@ -210,12 +214,13 @@ class FriendManager: ObservableObject {
             var newStreakCount = 1
             if let lastStreakDate = formatter.date(from: lastStreakDateStr) {
                 let daysSinceLast = Calendar.current.dateComponents([.day], from: lastStreakDate, to: today).day ?? 999
-                if daysSinceLast == 1 { // 翌日の場合のみストリーク継続
+                // ストリークの継続条件
+                if daysSinceLast <= 3 && daysSinceLast > 0 {
                     newStreakCount = previousStreakCount + 1
-                } else if daysSinceLast == 0 { // 同日の場合、ストリークは更新しない
-                    newStreakCount = previousStreakCount
-                } else { // 2日以上開いた場合、リセット
-                    newStreakCount = 1
+                } else if daysSinceLast == 0 {
+                    newStreakCount = previousStreakCount // 同日中の再会はカウントに影響しない
+                } else {
+                    newStreakCount = 1 // 3日以上空いたらリセット
                 }
             }
             

@@ -6,16 +6,17 @@
 //
 import SwiftUI
 import Foundation
-import FirebaseFirestore // Firestoreをインポート
-import FirebaseAuth // FirebaseAuthをインポート
-import Combine // Combineフレームワークをインポート
+import FirebaseFirestore
+import FirebaseAuth
+import Combine
 
+@MainActor
 final class ProfileManager: ObservableObject {
     static let shared = ProfileManager()
     
     @Published var currentUser: CurrentUser = CurrentUser(
         uuid: "",
-        name: "Setup Profile", // 初期設定を促すための仮の名前
+        name: "Setup Profile",
         description: "",
         icon: "profile_startImage",
         link: "",
@@ -24,48 +25,67 @@ final class ProfileManager: ObservableObject {
         lastLoginDate: nil
     ) {
         didSet {
-            // currentUserが変更されたらFirestoreに保存を試みる
-            // ただし、AuthManagerが認証済みでuserIdが設定されている場合のみ
-            if AuthManager.shared.isAuthenticated, let _ = AuthManager.shared.userId {
+            // currentUserが空でない場合だけFirestoreへ保存
+            if AuthManager.shared.isAuthenticated,
+               let _ = AuthManager.shared.userId,
+               !currentUser.uuid.isEmpty,
+               currentUser.name != "Setup Profile" // ← 本当に有効なプロフィールの時だけ保存
+            {
                 Task {
                     await saveProfileToFirestore()
                 }
+            } else {
+                print("[ProfileManager] ℹ️ didSetでのFirestore保存をスキップ（未認証または初期状態）")
             }
         }
     }
 
-    @Published var isProfileLoaded: Bool = false // プロフィールがFirestoreから読み込まれたかどうかのフラグ
+    @Published var isProfileLoaded: Bool = false
     
     private var db: Firestore!
     private var auth: Auth!
-    private let userDefaultsKey = "CurrentUserProfile" // ローカル保存用キー (初回起動時やオフライン対応のため残す)
-    private var cancellables = Set<AnyCancellable>() // Combineフレームワークのcancellablesセット
+    private let userDefaultsKey = "CurrentUserProfile"
+    private var cancellables = Set<AnyCancellable>()
 
     init() {
         db = Firestore.firestore()
         auth = Auth.auth()
-        
-        // まずUserDefaultsから読み込みを試みる (アプリ起動時の初期表示を高速化するため)
+
         loadProfileFromUserDefaults()
         print("[ProfileManager] ℹ️ ProfileManager初期化完了。UserDefaultsからプロフィールをロードしました。")
 
-        // AuthManagerの認証状態変更を監視し、プロフィールのロードをトリガーする
-        // ここではisProfileLoadedの状態を更新するのみで、リセットはresetProfileForUnauthenticatedUser() に任せる
+        // 🔧 修正：明示的に currentUser が存在するかチェックしてからロジックを進める
+        if let user = Auth.auth().currentUser {
+            let uid = user.uid
+            print("[ProfileManager] ✅ 起動時に currentUser 存在確認: \(uid)")
+            Task {
+                await self.loadProfileFromFirestore(userId: uid)
+            }
+        } else {
+            print("[ProfileManager] ℹ️ 起動時に currentUser が nil のため、まだ未認証と判断。")
+        }
+
         AuthManager.shared.$isAuthenticated
             .sink { [weak self] isAuthenticated in
                 guard let self = self else { return }
                 DispatchQueue.main.async {
-                    // AuthManagerの認証状態が変更されたらisProfileLoadedを更新
                     self.isProfileLoaded = isAuthenticated
                     print("[ProfileManager] ℹ️ AuthManagerの認証状態が変更されました。isProfileLoaded: \(self.isProfileLoaded)")
+                }
+                if isAuthenticated, let userId = AuthManager.shared.userId {
+                    Task {
+                        await self.loadProfileFromFirestore(userId: userId)
+                    }
+                } else {
+//                    self.resetProfileForUnauthenticatedUser()
                 }
             }
             .store(in: &cancellables)
     }
 
+
     // MARK: - 未認証ユーザー向けプロフィールリセット
-    // AuthManagerから呼び出されることを想定
-    func resetProfileForUnauthenticatedUser() {
+    func resetProfileForUnauthenticatedUser() { 
         DispatchQueue.main.async {
             self.currentUser = CurrentUser(
                 uuid: "",
@@ -77,15 +97,15 @@ final class ProfileManager: ObservableObject {
                 recentPhotos: [],
                 lastLoginDate: nil
             )
-            self.isProfileLoaded = false // 未認証なのでプロフィールはロードされていない状態
-            AuthManager.shared.needsInitialProfileSetup = true // 初期設定が必要な状態にする
-            self.saveProfileToUserDefaults() // ローカルもクリア
+            self.isProfileLoaded = false
+            AuthManager.shared.needsInitialProfileSetup = true
+            self.saveProfileToUserDefaults()
             print("[ProfileManager] ℹ️ 未認証のためローカルプロフィールをリセットし、初期設定が必要に設定しました。")
         }
     }
 
     // MARK: - プロフィール保存 (UserDefaults)
-    func saveProfileToUserDefaults() {
+    func saveProfileToUserDefaults() { //
         do {
             let data = try JSONEncoder().encode(currentUser)
             UserDefaults.standard.set(data, forKey: userDefaultsKey)
@@ -96,7 +116,7 @@ final class ProfileManager: ObservableObject {
     }
 
     // MARK: - プロフィール読み込み (UserDefaults)
-    private func loadProfileFromUserDefaults() {
+    private func loadProfileFromUserDefaults() { //
         if let data = UserDefaults.standard.data(forKey: userDefaultsKey) {
             do {
                 let user = try JSONDecoder().decode(CurrentUser.self, from: data)
@@ -111,16 +131,14 @@ final class ProfileManager: ObservableObject {
     }
 
     // MARK: - プロフィール保存 (Firestore)
-    func saveProfileToFirestore() async {
-        guard let userId = AuthManager.shared.userId else { // AuthManagerからuserIdを取得
+    func saveProfileToFirestore() async { //
+        guard let userId = AuthManager.shared.userId else {
             print("[ProfileManager] ⚠️ User IDが未設定のためFirestoreに保存できません。")
             return
         }
         
-        // Firestoreのパス: /users/{userId}/profile/current
         let profileRef = db.collection("users").document(userId).collection("profile").document("current")
         
-        // currentUserのUUIDをFirebaseのuserIdと同期させる
         DispatchQueue.main.async {
             if self.currentUser.uuid != userId {
                 self.currentUser.uuid = userId
@@ -129,15 +147,22 @@ final class ProfileManager: ObservableObject {
         }
 
         do {
-            let data = try Firestore.Encoder().encode(currentUser)
+            var data = try Firestore.Encoder().encode(currentUser)
+            // lastLoginDate が nil の場合、またはサインイン/サインアップ直後の場合は現在時刻を設定
+            if currentUser.lastLoginDate == nil || data["lastLoginDate"] == nil { //
+                data["lastLoginDate"] = Timestamp(date: Date()) //
+                DispatchQueue.main.async { //
+                    self.currentUser.lastLoginDate = Date() //
+                }
+            }
+            
             try await profileRef.setData(data)
             print("[ProfileManager] ✅ Firestoreにプロフィール保存完了: \(currentUser.uuid)")
-            saveProfileToUserDefaults() // Firestore保存成功後、UserDefaultsも更新
+            saveProfileToUserDefaults() //
             
-            // プロフィールが正常に保存されたので、初期設定は不要
-            DispatchQueue.main.async {
-                AuthManager.shared.needsInitialProfileSetup = false
-                print("[ProfileManager] ℹ️ needsInitialProfileSetupをfalseに設定 (Firestore保存成功)")
+            DispatchQueue.main.async { //
+                AuthManager.shared.needsInitialProfileSetup = false //
+                print("[ProfileManager] ℹ️ needsInitialProfileSetupをfalseに設定 (Firestore保存成功)") //
             }
         } catch {
             print("[ProfileManager] ❌ Firestore保存失敗: \(error.localizedDescription)")
@@ -146,7 +171,7 @@ final class ProfileManager: ObservableObject {
     }
 
     // MARK: - プロフィール読み込み (Firestore)
-    func loadProfileFromFirestore(userId: String) async { // userIdを引数で受け取る
+    func loadProfileFromFirestore(userId: String) async { //
         print("[ProfileManager] 🔄 Firestoreからプロフィールをロード中... User ID: \(userId)")
         let profileRef = db.collection("users").document(userId).collection("profile").document("current")
         
@@ -156,21 +181,19 @@ final class ProfileManager: ObservableObject {
                 let user = try document.data(as: CurrentUser.self)
                 DispatchQueue.main.async {
                     self.currentUser = user
-                    self.isProfileLoaded = true // プロフィールが正常にロードされた
+                    self.isProfileLoaded = true
                     print("[ProfileManager] ✅ Firestoreからプロフィール読み込み成功: \(user.uuid)。isProfileLoaded: \(self.isProfileLoaded)")
-                    self.saveProfileToUserDefaults() // Firestoreから読み込み成功後、UserDefaultsも更新
+                    self.saveProfileToUserDefaults()
                     
-                    // プロフィールが存在するので、初期設定は不要と判断
-                    AuthManager.shared.needsInitialProfileSetup = false // <-- ここでfalseに設定
+                    AuthManager.shared.needsInitialProfileSetup = false
                     print("[ProfileManager] ℹ️ needsInitialProfileSetupをfalseに設定 (プロフィール存在)")
                 }
             } else {
                 print("[ProfileManager] ℹ️ Firestoreにプロフィールが見つかりません。初期プロフィール設定が必要です。")
-                // Firestoreにデータがない場合、初期プロフィール設定が必要な状態にする
                 DispatchQueue.main.async {
                     self.currentUser = CurrentUser(
-                        uuid: userId, // 新規ユーザーなのでUUIDをFirebase User IDに設定
-                        name: "Setup Profile", // UIで初期設定を促すための仮の名前
+                        uuid: userId,
+                        name: "Setup Profile",
                         description: "",
                         icon: "profile_startImage",
                         link: "",
@@ -178,29 +201,44 @@ final class ProfileManager: ObservableObject {
                         recentPhotos: [],
                         lastLoginDate: nil
                     )
-                    self.isProfileLoaded = true // データは初期化されたが、ロード処理は完了したと見なす
-                    AuthManager.shared.needsInitialProfileSetup = true // AuthManagerのフラグを更新
-                    self.saveProfileToUserDefaults() // ローカルも更新
+                    self.isProfileLoaded = true
+                    AuthManager.shared.needsInitialProfileSetup = true
+                    self.saveProfileToUserDefaults()
                     print("[ProfileManager] ℹ️ needsInitialProfileSetupをtrueに設定 (プロフィールなし)。isProfileLoaded: \(self.isProfileLoaded)")
                 }
             }
         } catch {
             print("[ProfileManager] ❌ Firestore読み込み失敗: \(error.localizedDescription)")
-            // 読み込み失敗時はUserDefaultsのデータを使用し、UUIDがなければ生成
             DispatchQueue.main.async {
-                if self.currentUser.uuid.isEmpty { // UserDefaultsから読み込めていない場合
-                    self.currentUser.uuid = userId // Firebase User IDを使用
+                if self.currentUser.uuid.isEmpty {
+                    self.currentUser.uuid = userId
                     print("[ProfileManager] ⚙️ UUID自動生成 (Firestore読み込み失敗時): \(self.currentUser.uuid)")
                 }
-                self.isProfileLoaded = true // エラーでロードは完了したと見なす
-                // エラー時も needsInitialProfileSetup を適切に設定
+                self.isProfileLoaded = true
                 AuthManager.shared.needsInitialProfileSetup = self.currentUser.name == "Setup Profile" || self.currentUser.name.isEmpty
                 print("[ProfileManager] ℹ️ needsInitialProfileSetupを\(AuthManager.shared.needsInitialProfileSetup)に設定 (Firestore読み込みエラー)。isProfileLoaded: \(self.isProfileLoaded)")
                 Task {
-                    await self.saveProfileToFirestore() // エラー時もFirestoreへの保存を試みる
+                    await self.saveProfileToFirestore()
                 }
             }
         }
     }
+    
+    // MARK: - lastLoginDate の更新
+    func updateLastLoginDate() async { //
+        guard let userId = AuthManager.shared.userId else {
+            print("[ProfileManager] ⚠️ User IDが未設定のためlastLoginDateを更新できません。")
+            return
+        }
+        let profileRef = db.collection("users").document(userId).collection("profile").document("current")
+        do {
+            try await profileRef.updateData(["lastLoginDate": Timestamp(date: Date())])
+            DispatchQueue.main.async {
+                self.currentUser.lastLoginDate = Date()
+                print("[ProfileManager] ✅ FirestoreのlastLoginDateを更新しました。")
+            }
+        } catch {
+            print("[ProfileManager] ❌ lastLoginDateの更新に失敗しました: \(error.localizedDescription)")
+        }
+    }
 }
-

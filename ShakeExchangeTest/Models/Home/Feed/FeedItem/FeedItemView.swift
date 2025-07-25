@@ -5,9 +5,12 @@
 //  Created by 俣江悠聖 on 2025/05/20.
 //
 import SwiftUI
+import FirebaseAuth
+import Firebase
 
 struct FeedItemView: View {
     let feedEntry: FeedEntry // FeedEntry全体を受け取る
+    // photoはfeedEntry.photoと重複するため削除
     
     @State private var isLiked = false
     @State private var outerImage: UIImage? = nil
@@ -131,7 +134,22 @@ struct FeedItemView: View {
         isLoadingImage = true
         outerImage = nil // 古い画像をクリア
         Task {
-            let loadedImage = await AlbumManager.shared.downloadImage(from: feedEntry.photo.outerImage)
+            var loadedImage: UIImage?
+            if let currentUserUUID = Auth.auth().currentUser?.uid {
+                if currentUserUUID == feedEntry.photo.userUUID { // Use feedEntry.photo
+                    // 自分の写真 → 通常の画像取得 (async version)
+                    loadedImage = await AlbumManager.shared.downloadImage(from: feedEntry.photo.outerImage)
+                } else {
+                    // 友達の写真 → CloudFunctions経由で取得 (completion handler version)
+                    // Use a CheckedContinuation to bridge completion handler to async/await
+                    loadedImage = await withCheckedContinuation { continuation in
+                        AlbumManager.shared.downloadImageWithSignedURL(photoId: feedEntry.photo.id.uuidString) { image in
+                            continuation.resume(returning: image)
+                        }
+                    }
+                }
+            }
+
             DispatchQueue.main.async {
                 self.outerImage = loadedImage
                 self.isLoadingImage = false

@@ -8,11 +8,13 @@
 import GoogleMobileAds
 import SwiftUI
 
+@MainActor
 class InterstitialAdManager: NSObject, ObservableObject, FullScreenContentDelegate {
     private var interstitial: InterstitialAd? // InterstitialAd は GoogleMobileAds SDK の InterstitialAd
     
     private var onAdDismissedCompletion: (() -> Void)?
     private var onAdImpressionRecordedCompletion: (() -> Void)? // 今回は使わないが残しておく
+    @Published var isAdLoaded: Bool = false
 
     override init() {
         super.init()
@@ -37,6 +39,7 @@ class InterstitialAdManager: NSObject, ObservableObject, FullScreenContentDelega
                 }
                 self.interstitial = ad
                 self.interstitial?.fullScreenContentDelegate = self
+                self.isAdLoaded = (ad != nil)
                 print("✅ Interstitial ad loaded")
             }
         )
@@ -57,7 +60,9 @@ class InterstitialAdManager: NSObject, ObservableObject, FullScreenContentDelega
         self.onAdImpressionRecordedCompletion = onPresented
         self.onAdDismissedCompletion = onDismissed
 
-        ad.present(from: rootViewController)
+        DispatchQueue.main.async {
+            ad.present(from: rootViewController)
+        }
         // ここでは interstitial を nil にせず、デリゲートメソッドが呼ばれるまで待つ
     }
 
@@ -75,6 +80,7 @@ class InterstitialAdManager: NSObject, ObservableObject, FullScreenContentDelega
     func adDidDismissFullScreenContent(_ ad: FullScreenPresentingAd) {
         print("ℹ️ Interstitial ad dismissed")
         self.interstitial = nil
+        isAdLoaded = false
         loadAd() // 次の表示のために新しい広告をプリロード
 
         onAdDismissedCompletion?()
@@ -85,6 +91,7 @@ class InterstitialAdManager: NSObject, ObservableObject, FullScreenContentDelega
     func ad(_ ad: FullScreenPresentingAd, didFailToPresentFullScreenContentWithError error: Error) {
         print("❌ Failed to present interstitial ad: \(error.localizedDescription)")
         self.interstitial = nil
+        isAdLoaded = false
         loadAd() // 次の表示のために新しい広告をプリロード
 
         onAdDismissedCompletion?()

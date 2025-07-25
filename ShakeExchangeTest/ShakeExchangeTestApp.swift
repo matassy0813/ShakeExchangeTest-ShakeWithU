@@ -67,6 +67,8 @@ struct ShakeExchangeTestApp: App {
                             }
                     } else {
                         ContentView()
+                            .background(Color.black)
+                            .ignoresSafeArea()
                             .environmentObject(FriendManager.shared)
                             .onAppear {
                                 print("[ShakeExchangeTestApp] ➡️ 認証済み、メインコンテンツへ遷移。")

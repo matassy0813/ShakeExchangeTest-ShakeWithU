@@ -10,6 +10,9 @@ import SwiftUI
 struct HomeView: View {
     @State private var showingTerms: Bool = false
     @State private var showingPrivacy: Bool = false
+    @State private var showingTutorial: Bool = false
+    @State private var isLoggingOut = false
+    @State private var showingLogoutAlert = false
 
     var body: some View {
         NavigationView {
@@ -62,6 +65,54 @@ struct HomeView: View {
                         .sheet(isPresented: $showingPrivacy) {
                             TermsAndPrivacyView(documentType: .privacy)
                         }
+                        
+                        Button(action: {
+                            showingTutorial = true
+                        }) {
+                            Text("使い方")
+                                .font(.caption2)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(
+                                    Capsule().fill(
+                                        LinearGradient(
+                                            gradient: Gradient(colors: [Color.green.opacity(0.3), Color.teal.opacity(0.3)]),
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                )
+                                .foregroundColor(.white)
+                        }
+                        .sheet(isPresented: $showingTutorial) {
+                            ShakeTutorialView()
+                        }
+                        
+                        Button(action: {
+                            showingLogoutAlert = true
+                        }) {
+                            Image(systemName: "rectangle.portrait.and.arrow.right")
+                                .font(.caption)
+                                .padding(8)
+                                .background(Color.red.opacity(0.2))
+                                .clipShape(Circle())
+                                .foregroundColor(.red)
+                        }
+                        .alert(isPresented: $showingLogoutAlert) {
+                            Alert(
+                                title: Text("ログアウトしますか？"),
+                                message: Text("現在のアカウントからログアウトします。"),
+                                primaryButton: .destructive(Text("ログアウト")) {
+                                    Task {
+                                        isLoggingOut = true
+                                        _ = await AuthManager.shared.signOut()
+                                        isLoggingOut = false
+                                    }
+                                },
+                                secondaryButton: .cancel()
+                            )
+                        }
+
                     }
                 )
         }

@@ -107,8 +107,8 @@ class FeedManager: ObservableObject {
                 
                 if photo.userUUID == userId {
                     // 自分が撮影した写真
-                    ownerName = ProfileManager.shared.currentUser.name
-                    ownerIcon = ProfileManager.shared.currentUser.icon
+                    ownerName = await ProfileManager.shared.currentUser.name
+                    ownerIcon = await ProfileManager.shared.currentUser.icon
                 } else if let friend = friends.first(where: { $0.uuid == photo.userUUID }) {
                     // 友達が撮影した写真（photo.userUUID は友達のUUID）
                     ownerName = photo.ownerName ?? friend.nickname // photo.ownerName を優先

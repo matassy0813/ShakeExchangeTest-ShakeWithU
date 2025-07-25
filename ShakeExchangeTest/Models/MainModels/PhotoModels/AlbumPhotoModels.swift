@@ -44,27 +44,28 @@ extension Color: Codable {
 
 // MARK: - Album Photo Model
 public struct AlbumPhoto: Identifiable, Hashable, Codable {
-    public var id = UUID()
-    public var userUUID: String // 写真を撮影したユーザーのUUID
-    public var friendUUID: String // 写真に写っている友達のUUID
-    public var outerImage: String // Storageパス
-    public var innerImage: String // Storageパス
+    // id の初期化を削除し、var で宣言するだけにするか、
+    // 以下のように引数として受け取れるイニシャライザを追加する
+    public var id: UUID // 明示的に外部から設定できるようにする
+    public var userUUID: String
+    public var friendUUID: String
+    public var outerImage: String
+    public var innerImage: String
     public var date: String
     public var note: String
     public var rotation: Double
-    public var pinColor: Color // ColorがCodableなので、特別な実装は不要
+    public var pinColor: Color
 
-    // フィード表示のために、撮影者と相手のアイコン・名前も保持できるように拡張
-    // これらはAlbumPhotoのメタデータとしてFirestoreに保存されることを想定
-    public var ownerName: String? // 撮影者の名前
-    public var ownerIcon: String? // 撮影者のアイコンパス
-    public var friendNameAtCapture: String? // 撮影時の友達の名前
-    public var friendIconAtCapture: String? // 撮影時の友達のアイコンパス
+    public var ownerName: String?
+    public var ownerIcon: String?
+    public var friendNameAtCapture: String?
+    public var friendIconAtCapture: String?
 
-    // 追加: この写真を見ることができるユーザーのUUIDs
     public var viewerUUIDs: [String]?
 
-    public init(userUUID: String, friendUUID: String, outerImage: String, innerImage: String, date: String, note: String, rotation: Double, pinColor: Color, ownerName: String? = nil, ownerIcon: String? = nil, friendNameAtCapture: String? = nil, friendIconAtCapture: String? = nil, viewerUUIDs: [String]? = nil) {
+    // 新しいイニシャライザを追加、または既存のイニシャライザに id を追加
+    public init(id: UUID = UUID(), userUUID: String, friendUUID: String, outerImage: String, innerImage: String, date: String, note: String, rotation: Double, pinColor: Color, ownerName: String? = nil, ownerIcon: String? = nil, friendNameAtCapture: String? = nil, friendIconAtCapture: String? = nil, viewerUUIDs: [String]? = nil) {
+        self.id = id // 受け取った id を設定
         self.userUUID = userUUID
         self.friendUUID = friendUUID
         self.outerImage = outerImage

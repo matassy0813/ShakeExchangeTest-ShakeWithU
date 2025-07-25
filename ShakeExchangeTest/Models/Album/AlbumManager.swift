@@ -11,6 +11,7 @@ import FirebaseFirestore
 import FirebaseStorage
 import FirebaseAuth
 import Combine
+import FirebaseFunctions
 
 class AlbumManager: ObservableObject {
     static let shared = AlbumManager()
@@ -18,6 +19,11 @@ class AlbumManager: ObservableObject {
     private var db: Firestore!
     private var storage: Storage!
     private var auth: Auth!
+    var outerUIImage: UIImage? // ← 表示用画像キャッシュ
+    var innerUIImage: UIImage?
+    
+    var outerImageURL: String?
+    var outerImageData: UIImage?
 
     private init() {
         db = Firestore.firestore()
@@ -39,10 +45,11 @@ class AlbumManager: ObservableObject {
             throw PhotoError.userNotAuthenticated
         }
         
-        let currentUserProfile = ProfileManager.shared.currentUser // 自分のプロフィールを取得
+        let currentUserProfile = await ProfileManager.shared.currentUser // 自分のプロフィールを取得
 
         // ユニークなファイル名を生成
-        let photoUUID = UUID().uuidString
+        let uuid = UUID()
+        let photoUUID = uuid.uuidString
         let outerImageFilename = "photo_\(photoUUID)_outer.jpg"
         let innerImageFilename = "photo_\(photoUUID)_inner.jpg"
 
@@ -77,19 +84,21 @@ class AlbumManager: ObservableObject {
 
         // MARK: 3. Firestoreにメタデータを保存
         let newAlbumPhoto = AlbumPhoto(
-            userUUID: userId, // 自分のUUID (Firebase Auth UID)
-            friendUUID: receivedUser.uuid, // 相手のUUID
-            outerImage: "\(storagePath)/\(outerImageFilename)", // Storageパスを保存
-            innerImage: "\(storagePath)/\(innerImageFilename)", // Storageパスを保存
+            // ここで photoUUID を id として明示的に設定する
+            id: uuid, // FirestoreのドキュメントIDと同じUUIDをAlbumPhotoのidに設定
+            userUUID: userId,
+            friendUUID: receivedUser.uuid,
+            outerImage: "\(storagePath)/\(outerImageFilename)",
+            innerImage: "\(storagePath)/\(innerImageFilename)",
             date: currentDateString(),
             note: note,
-            rotation: Double.random(in: -5...5), // ランダムな傾き
-            pinColor: Color(hue: Double.random(in: 0...1), saturation: 0.7, brightness: 0.9), // ランダムなピン色
-            ownerName: currentUserProfile.name, // 自分の名前を記録
-            ownerIcon: currentUserProfile.icon, // 自分のアイコンパスを記録
-            friendNameAtCapture: receivedUser.name, // 相手の名前を記録
-            friendIconAtCapture: receivedUser.icon, // 相手のアイコンパスを記録
-            viewerUUIDs: [userId, receivedUser.uuid] // 撮影者と相手のUUIDを含める
+            rotation: Double.random(in: -5...5),
+            pinColor: Color(hue: Double.random(in: 0...1), saturation: 0.7, brightness: 0.9),
+            ownerName: currentUserProfile.name,
+            ownerIcon: currentUserProfile.icon,
+            friendNameAtCapture: receivedUser.name,
+            friendIconAtCapture: receivedUser.icon,
+            viewerUUIDs: [userId, receivedUser.uuid]
         )
 
         let albumPhotoRef = db.collection("users").document(userId).collection("albums").document(photoUUID)
@@ -175,6 +184,34 @@ class AlbumManager: ObservableObject {
         } catch {
             print("[AlbumManager] ❌ 共有フィード写真読み込み失敗: \(error.localizedDescription)")
             throw PhotoError.firestoreLoadFailed(error)
+        }
+    }
+
+    func downloadImageWithSignedURL(photoId: String, completion: @escaping (UIImage?) -> Void) {
+        let functions = Functions.functions()
+        // ここを修正: "getSignedFeedPhotoURL" から "getSignedFeedPhotoUrl" に変更
+        functions.httpsCallable("getSignedFeedPhotoUrl").call(["photoId": photoId]) { result, error in
+            if let error = error {
+                print("❌ Failed to get signed URL: \(error)")
+                completion(nil)
+                return
+            }
+
+            guard let data = result?.data as? [String: Any],
+                  let urlString = data["url"] as? String,
+                  let url = URL(string: urlString) else {
+                print("❌ Invalid URL data returned")
+                completion(nil)
+                return
+            }
+
+            URLSession.shared.dataTask(with: url) { data, _, _ in
+                if let data = data, let image = UIImage(data: data) {
+                    completion(image)
+                } else {
+                    completion(nil)
+                }
+            }.resume()
         }
     }
 

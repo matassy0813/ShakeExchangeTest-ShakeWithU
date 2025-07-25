@@ -10,6 +10,7 @@ import Foundation
 import CoreMotion
 import UIKit // UIImage のために必要
 
+@MainActor
 class MultipeerManager: NSObject, ObservableObject, MCSessionDelegate, MCNearbyServiceAdvertiserDelegate, MCNearbyServiceBrowserDelegate {
     static let shared = MultipeerManager()
     private let serviceType = "shake-connect"
@@ -21,6 +22,7 @@ class MultipeerManager: NSObject, ObservableObject, MCSessionDelegate, MCNearbyS
     private let motionManager = CMMotionManager()
     
     @Published var isHandshakeDetected: Bool = false
+    @Published var isCommunicating: Bool = false
 
     var onReceiveUser: ((CurrentUser) -> Void)?
 
@@ -40,6 +42,7 @@ class MultipeerManager: NSObject, ObservableObject, MCSessionDelegate, MCNearbyS
 
     func startAdvertising() {
         advertiser.startAdvertisingPeer()
+        isCommunicating = true
     }
 
     func startBrowsing() {
@@ -50,19 +53,25 @@ class MultipeerManager: NSObject, ObservableObject, MCSessionDelegate, MCNearbyS
         advertiser.stopAdvertisingPeer()
         browser.stopBrowsingForPeers()
         resetSession()
+        isCommunicating = false
     }
     
     func resetSession() {
         print("[MultipeerManager] 🔄 セッションリセット開始")
         session.disconnect()
-        session = MCSession(peer: myPeerID, securityIdentity: nil, encryptionPreference: .required)
-        session.delegate = self
+//        session = MCSession(peer: myPeerID, securityIdentity: nil, encryptionPreference: .required)
+//        session.delegate = self
+        session = nil
+        // 新しいセッションとdelegateのセットアップ
+        let newSession = MCSession(peer: myPeerID, securityIdentity: nil, encryptionPreference: .required)
+        newSession.delegate = self
+        session = newSession
         print("[MultipeerManager] ✅ セッション新規作成済み")
     }
 
 
     func send(data: Data) {
-        guard !session.connectedPeers.isEmpty else {
+        guard let session = session, !session.connectedPeers.isEmpty  else {
             print("[MultipeerManager] ⚠️ 接続ピアがありません。データ送信スキップ。")
             return
         }
@@ -140,6 +149,11 @@ class MultipeerManager: NSObject, ObservableObject, MCSessionDelegate, MCNearbyS
     func session(_ session: MCSession, didReceive data: Data, fromPeer peerID: MCPeerID) {
         DispatchQueue.main.async {
             do {
+                
+                guard let jsonString = String(data: data, encoding: .utf8) else {
+                    print("[MultipeerManager] ❌ 無効なデータ（文字列変換不可）")
+                    return
+                }
                 // まずは受信したデータを辞書としてパース
                 guard let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] else {
                     print("[MultipeerManager] ❌ 受信データが有効なJSON形式ではありません。")
@@ -200,6 +214,15 @@ class MultipeerManager: NSObject, ObservableObject, MCSessionDelegate, MCNearbyS
                         print("[MultipeerManager] ✅ 新規Friend追加")
                     } else {
                         print("[MultipeerManager] 🔄 既存Friend更新")
+                        
+                        FriendManager.shared.incrementEncounterCount(for: user.uuid)
+                        
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                            if let friend = FriendManager.shared.getFriend(by: user.uuid) {
+                                FriendManager.shared.updateStreakCount(for: user.uuid, to: friend.streakCount ?? 1)
+                            }
+                        }
+                        
                     }
 
                     self.onReceiveUser?(user)
@@ -234,7 +257,6 @@ class MultipeerManager: NSObject, ObservableObject, MCSessionDelegate, MCNearbyS
     }
     
     func detectHandshake() {
-        guard !isHandshakeDetected else { return }
         DispatchQueue.main.async {
             self.isHandshakeDetected = true
             print("[MultipeerManager] 🤝 Handshake検知")
@@ -250,6 +272,7 @@ class MultipeerManager: NSObject, ObservableObject, MCSessionDelegate, MCNearbyS
                     print("[MultipeerManager] 🕓 検知リセット (接続中)")
                 } else {
                     self.isHandshakeDetected = false
+                    self.isCommunicating = false
                     print("[MultipeerManager] 🕓 検知リセット (未接続)")
                 }
             }

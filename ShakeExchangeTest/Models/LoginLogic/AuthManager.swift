@@ -47,6 +47,8 @@ class AuthManager: ObservableObject {
                     self.userId = nil
                     self.hasAgreedToTerms = false // 未認証の場合は同意状態をリセット
                     print("[AuthManager] ℹ️ ユーザー未認証。")
+                    // 未認証になったらProfileManagerをリセット
+//                    ProfileManager.shared.resetProfileForUnauthenticatedUser()
                 }
             }
         }
@@ -66,6 +68,8 @@ class AuthManager: ObservableObject {
         do {
             let result = try await Auth.auth().createUser(withEmail: email, password: password)
             print("[AuthManager] ✅ サインアップ成功: \(result.user.uid)")
+            // サインアップ成功時にlastLoginDateを更新
+            await ProfileManager.shared.updateLastLoginDate()
             return true
         } catch {
             errorMessage = error.localizedDescription
@@ -80,6 +84,8 @@ class AuthManager: ObservableObject {
         do {
             let result = try await Auth.auth().signIn(withEmail: email, password: password)
             print("[AuthManager] ✅ サインイン成功: \(result.user.uid)")
+            // サインイン成功時にlastLoginDateを更新
+            await ProfileManager.shared.updateLastLoginDate()
             return true
         } catch {
             errorMessage = error.localizedDescription
@@ -98,13 +104,7 @@ class AuthManager: ObservableObject {
             self.hasAgreedToTerms = false // ログアウト時に同意状態をリセット
             saveTermsAgreementStatus() // UserDefaultsも更新
             // ローカルのプロフィールデータもリセット
-            DispatchQueue.main.async {
-                ProfileManager.shared.currentUser = CurrentUser(
-                    uuid: "", name: "Guest User", description: "", icon: "profile_startImage", link: "", challengeStatus: 0, recentPhotos: [], lastLoginDate: nil
-                )
-                ProfileManager.shared.saveProfileToUserDefaults()
-                ProfileManager.shared.isProfileLoaded = false // プロフィールがロードされていない状態にする
-            }
+            // この処理はProfileManager.shared.resetProfileForUnauthenticatedUser() に任せる
             return true
         } catch {
             errorMessage = error.localizedDescription
@@ -114,6 +114,8 @@ class AuthManager: ObservableObject {
     }
     
     // MARK: - セッション有効期限チェック (アプリ起動時に呼び出す)
+    // このメソッドは、ProfileManagerがcurrentUser.lastLoginDateをFirestoreから
+    // 完全にロードした後に呼び出すべきです。
     func checkSessionValidity() async {
         guard isAuthenticated, let userId = self.userId else {
             print("[AuthManager] ℹ️ セッションチェック: ユーザーは認証されていません。")
@@ -121,9 +123,10 @@ class AuthManager: ObservableObject {
         }
         
         // ProfileManagerから最新のlastLoginDateを取得
+        // ここで再度ロードするのは、ProfileManagerの監視がまだ完了していない場合の安全策
+        // ただし、理想的にはProfileManagerのロード完了を待つべき
         await ProfileManager.shared.loadProfileFromFirestore(userId: userId)
-        
-        guard let lastLoginDate = ProfileManager.shared.currentUser.lastLoginDate else {
+        guard let lastLoginDate = await ProfileManager.shared.currentUser.lastLoginDate else {
             print("[AuthManager] ℹ️ セッションチェック: lastLoginDate が見つかりません。再認証を促します。")
             await signOut() // lastLoginDate がない場合はログアウト
             return
