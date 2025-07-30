@@ -169,3 +169,52 @@ export const getSignedFeedPhotoUrl = onCall(async (request: CallableRequest<Phot
     throw new HttpsError("internal", "Failed to get signed URL.", error.message);
   }
 });
+
+export const sendMeet = onCall({}, async (request) => {
+  const {fromUserId, toUserId, message} = request.data;
+
+  if (!fromUserId || !toUserId || !message) {
+    throw new Error("Missing required fields");
+  }
+
+  // FCMトークンの取得（users/{uid}/fcmToken を想定）
+  const toUserDoc = await admin.firestore().collection("users").doc(toUserId).get();
+  const token = toUserDoc.get("fcmToken");
+
+  if (!token) {
+    console.warn(`No FCM token for user: ${toUserId}`);
+    return {success: false, reason: "No token"};
+  }
+
+  const payload: admin.messaging.Message = {
+    token,
+    notification: {
+      title: "👋 meet!!",
+      body: `${message}`,
+    },
+    data: {
+      type: "meet",
+      fromUserId,
+      message,
+    },
+    apns: {
+      payload: {
+        aps: {
+          contentAvailable: true,
+        },
+      },
+      headers: {
+        "apns-push-type": "alert",
+        "apns-priority": "10",
+        "apns-topic": "com.matassy.ShakeExchangeTest.ShakeExchangeTest", // ← iOS AppのBundleIDに置き換える
+      },
+    },
+    android: {
+      priority: "high",
+    },
+  };
+
+  await admin.messaging().send(payload);
+  console.log(`✅ meet!! sent from ${fromUserId} to ${toUserId}`);
+  return {success: true};
+});

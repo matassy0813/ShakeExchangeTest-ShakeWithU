@@ -17,6 +17,7 @@ struct SocialNetworkView: View {
     
     @StateObject private var adManager = InterstitialAdManager() //
     @Environment(\.presentationMode) var presentationMode //
+    @State private var selectedNodeForMeet: NetworkNode? = nil
     
     var currentUserId: String { //
         Auth.auth().currentUser?.uid ?? "" //
@@ -118,7 +119,7 @@ struct SocialNetworkView: View {
                                     path.move(to: sourcePosition) //
                                     path.addLine(to: targetPosition) //
                                     
-                                    context.stroke(path, with: .color(Color.white.opacity(0.1)), lineWidth: 0.5) //
+                                    context.stroke(path, with: .color(Color.white.opacity(0.8)), lineWidth: 0.5) //
                                 }
                             }
                         }
@@ -129,6 +130,11 @@ struct SocialNetworkView: View {
                     }
                 }
             }
+        }
+        .sheet(item: $selectedNodeForMeet) { node in
+            MeetMessageView(targetNode: node, onSend: { message in
+                networkGraphManager.sendMeet(to: node.id, message: message)
+            })
         }
         .navigationTitle("Network Graph") //
         .navigationBarTitleDisplayMode(.inline) //
@@ -204,35 +210,42 @@ struct SocialNetworkView: View {
 
         VStack { //
             ZStack { //
-                Circle() //
-                    .fill(displayNode.isCurrentUser ? Color.white.opacity(0.08) : Color.white.opacity(0.03)) //
-                    .overlay(Circle().stroke(Color.white.opacity(0.3), lineWidth: 1.5)) //
-                    .shadow(color: .white.opacity(0.1), radius: 4) //
-                    .frame(width: displayNode.isCurrentUser ? currentUserNodeSize : nodeSize, //
-                           height: displayNode.isCurrentUser ? currentUserNodeSize : nodeSize) //
-                    .overlay( //
-                        Circle() //
-                            .stroke(displayNode.isCurrentUser ? Color.blue : Color.purple.opacity(0.5), lineWidth: 2) //
-                    )
-                    .opacity(displayNode.distance >= 5 ? 0.0 : 1.0) //
-
-                if displayNode.distance <= 1 { //
-                    if let uiImage = loadUserIcon(named: displayNode.icon) { //
-                        Image(uiImage: uiImage) //
-                            .resizable() //
-                            .scaledToFill() //
-                            .frame(width: displayNode.isCurrentUser ? currentUserIconSize : iconSize, //
-                                   height: displayNode.isCurrentUser ? currentUserIconSize : iconSize) //
-                            .clipShape(Circle()) //
-                            .blur(radius: blurRadius(for: displayNode.distance)) //
-                    } else { //
-                        Image(systemName: "person.circle.fill") //
-                            .resizable() //
-                            .scaledToFit() //
-                            .frame(width: displayNode.isCurrentUser ? currentUserIconSize : iconSize, //
-                                   height: displayNode.isCurrentUser ? currentUserIconSize : iconSize) //
-                            .foregroundColor(.gray) //
-                            .blur(radius: blurRadius(for: displayNode.distance)) //
+                if displayNode.distance >= 5 {
+                    // 点として描画
+                    Circle()
+                        .fill(Color.white.opacity(0.2))
+                        .frame(width: 6, height: 6)
+                } else {
+                    Circle() //
+                        .fill(displayNode.isCurrentUser ? Color.white.opacity(0.08) : Color.white.opacity(0.03)) //
+                        .overlay(Circle().stroke(Color.white.opacity(0.3), lineWidth: 1.5)) //
+                        .shadow(color: .white.opacity(0.1), radius: 4) //
+                        .frame(width: displayNode.isCurrentUser ? currentUserNodeSize : nodeSize, //
+                               height: displayNode.isCurrentUser ? currentUserNodeSize : nodeSize) //
+                        .overlay( //
+                            Circle() //
+                                .stroke(displayNode.isCurrentUser ? Color.blue : Color.purple.opacity(0.5), lineWidth: 2) //
+                        )
+                        .opacity(displayNode.distance >= 5 ? 0.0 : 1.0) //
+                    
+                    if displayNode.distance <= 1 { //
+                        if let uiImage = loadUserIcon(named: displayNode.icon) { //
+                            Image(uiImage: uiImage) //
+                                .resizable() //
+                                .scaledToFill() //
+                                .frame(width: displayNode.isCurrentUser ? currentUserIconSize : iconSize, //
+                                       height: displayNode.isCurrentUser ? currentUserIconSize : iconSize) //
+                                .clipShape(Circle()) //
+                                .blur(radius: blurRadius(for: displayNode.distance)) //
+                        } else { //
+                            Image(systemName: "person.circle.fill") //
+                                .resizable() //
+                                .scaledToFit() //
+                                .frame(width: displayNode.isCurrentUser ? currentUserIconSize : iconSize, //
+                                       height: displayNode.isCurrentUser ? currentUserIconSize : iconSize) //
+                                .foregroundColor(.gray) //
+                                .blur(radius: blurRadius(for: displayNode.distance)) //
+                        }
                     }
                 }
             }
@@ -274,7 +287,7 @@ struct SocialNetworkView: View {
         .onTapGesture { //
             handleNodeTap(node: displayNode) //
         }
-        .opacity(displayNode.distance >= 5 ? 0.0 : 1.0) //
+        /*.opacity(displayNode.distance >= 5 ? 0.0 : 1.0)*/ //
     }
 
     // MARK: - ノード位置調整 (サーバーからの位置をビューサイズにフィットさせる)
@@ -445,18 +458,13 @@ struct SocialNetworkView: View {
     }
 
     // MARK: - ノードタップ処理
-    private func handleNodeTap(node: NetworkNode) { //
-        if node.isCurrentUser { //
-            print("👤 Current user tapped: \(node.name)") //
-        } else if node.distance == 1 { //
-            print("👥 Direct friend tapped: \(node.name)") //
-            // if let friend = friendManager.friends.first(where: { $0.uuid == node.id }) { // 未定義のためコメントアウト
-            //     print("Navigating to \(friend.name)'s profile. (Placeholder for actual navigation)") // 未定義のためコメントアウト
-            // }
-        } else if node.distance >= 2 && node.distance <= 4 { //
-            print("🚫 Friend at distance \(node.distance) tapped. Profile not viewable (name only).") //
-        } else if node.distance >= 5 { //
-            print("🚫 Friend at distance \(node.distance) tapped. Information hidden.") //
+    private func handleNodeTap(node: NetworkNode) {
+        if node.isCurrentUser {
+            print("👤 Current user tapped: \(node.name)")
+        } else if node.distance <= 4 {
+            selectedNodeForMeet = node
+        } else {
+            print("🚫 Node too far for meet: \(node.name)")
         }
     }
 }

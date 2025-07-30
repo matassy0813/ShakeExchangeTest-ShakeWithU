@@ -2,12 +2,15 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>GADApplicationIdentifier</key>
+	<string>ca-app-pub-6432164084077876~1939978994</string>
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_shake-connect._tcp</string>
 	</array>
-    
-    <key>GADApplicationIdentifier</key>
-    <string>ca-app-pub-6432164084077876~1939978994</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 </dict>
 </plist>

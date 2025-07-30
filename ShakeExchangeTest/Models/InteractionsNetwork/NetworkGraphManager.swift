@@ -8,6 +8,7 @@ import FirebaseFunctions
 import Foundation
 import Combine
 import FirebaseFirestore // Firestoreをインポート
+import FirebaseAuth
 
 class NetworkGraphManager: ObservableObject {
 
@@ -94,6 +95,23 @@ class NetworkGraphManager: ObservableObject {
             }
         }
     }
+    
+    func sendMeet(to targetUserId: String, message: String = "meet!!") {
+        let parameters: [String: Any] = [
+            "fromUserId": Auth.auth().currentUser?.uid ?? "",
+            "toUserId": targetUserId,
+            "message": message
+        ]
+        
+        functions.httpsCallable("sendMeet").call(parameters) { result, error in
+            if let error = error {
+                print("❌ Failed to send meet: \(error.localizedDescription)")
+            } else {
+                print("✅ meet!! sent to \(targetUserId) with message: \(message)")
+            }
+        }
+    }
+
 
     struct NetworkGraphResponse: Codable {
         let nodes: [NetworkNodePayload]

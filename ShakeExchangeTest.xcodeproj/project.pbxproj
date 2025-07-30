@@ -26,6 +26,7 @@
 		433863582E166F0D0033A293 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 433863572E166F0D0033A293 /* FirebaseStorage */; };
 		4338635A2E166F0D0033A293 /* FirebaseStorageCombine-Community in Frameworks */ = {isa = PBXBuildFile; productRef = 433863592E166F0D0033A293 /* FirebaseStorageCombine-Community */; };
 		433864022E277FDF0033A293 /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = 433864012E277FDF0033A293 /* GoogleMobileAds */; };
+		43C723082E390C7500069588 /* ShakeExchangeMeetNotification.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 43C723012E390C7500069588 /* ShakeExchangeMeetNotification.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -43,12 +44,34 @@
 			remoteGlobalIDString = 430F97592DDADB6100AA7F13;
 			remoteInfo = ShakeExchangeTest;
 		};
+		43C723062E390C7500069588 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 430F97522DDADB6100AA7F13 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 43C723002E390C7500069588;
+			remoteInfo = ShakeExchangeMeetNotification;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		43C7230D2E390C7500069588 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				43C723082E390C7500069588 /* ShakeExchangeMeetNotification.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		430F975A2DDADB6100AA7F13 /* ShakeExchangeTest.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ShakeExchangeTest.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		430F97672DDADB6200AA7F13 /* ShakeExchangeTestTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ShakeExchangeTestTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		430F97712DDADB6200AA7F13 /* ShakeExchangeTestUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ShakeExchangeTestUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		43C723012E390C7500069588 /* ShakeExchangeMeetNotification.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShakeExchangeMeetNotification.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -58,6 +81,13 @@
 				Info.plist,
 			);
 			target = 430F97592DDADB6100AA7F13 /* ShakeExchangeTest */;
+		};
+		43C7230C2E390C7500069588 /* Exceptions for "ShakeExchangeMeetNotification" folder in "ShakeExchangeMeetNotification" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 43C723002E390C7500069588 /* ShakeExchangeMeetNotification */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -78,6 +108,14 @@
 		430F97742DDADB6200AA7F13 /* ShakeExchangeTestUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = ShakeExchangeTestUITests;
+			sourceTree = "<group>";
+		};
+		43C723022E390C7500069588 /* ShakeExchangeMeetNotification */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				43C7230C2E390C7500069588 /* Exceptions for "ShakeExchangeMeetNotification" folder in "ShakeExchangeMeetNotification" target */,
+			);
+			path = ShakeExchangeMeetNotification;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -123,6 +161,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		43C722FE2E390C7500069588 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -132,6 +177,7 @@
 				430F975C2DDADB6100AA7F13 /* ShakeExchangeTest */,
 				430F976A2DDADB6200AA7F13 /* ShakeExchangeTestTests */,
 				430F97742DDADB6200AA7F13 /* ShakeExchangeTestUITests */,
+				43C723022E390C7500069588 /* ShakeExchangeMeetNotification */,
 				430F975B2DDADB6100AA7F13 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -142,6 +188,7 @@
 				430F975A2DDADB6100AA7F13 /* ShakeExchangeTest.app */,
 				430F97672DDADB6200AA7F13 /* ShakeExchangeTestTests.xctest */,
 				430F97712DDADB6200AA7F13 /* ShakeExchangeTestUITests.xctest */,
+				43C723012E390C7500069588 /* ShakeExchangeMeetNotification.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -156,10 +203,12 @@
 				430F97562DDADB6100AA7F13 /* Sources */,
 				430F97572DDADB6100AA7F13 /* Frameworks */,
 				430F97582DDADB6100AA7F13 /* Resources */,
+				43C7230D2E390C7500069588 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				43C723072E390C7500069588 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				430F975C2DDADB6100AA7F13 /* ShakeExchangeTest */,
@@ -236,6 +285,28 @@
 			productReference = 430F97712DDADB6200AA7F13 /* ShakeExchangeTestUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		43C723002E390C7500069588 /* ShakeExchangeMeetNotification */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 43C723092E390C7500069588 /* Build configuration list for PBXNativeTarget "ShakeExchangeMeetNotification" */;
+			buildPhases = (
+				43C722FD2E390C7500069588 /* Sources */,
+				43C722FE2E390C7500069588 /* Frameworks */,
+				43C722FF2E390C7500069588 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				43C723022E390C7500069588 /* ShakeExchangeMeetNotification */,
+			);
+			name = ShakeExchangeMeetNotification;
+			packageProductDependencies = (
+			);
+			productName = ShakeExchangeMeetNotification;
+			productReference = 43C723012E390C7500069588 /* ShakeExchangeMeetNotification.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -243,7 +314,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 1630;
+				LastSwiftUpdateCheck = 1640;
 				LastUpgradeCheck = 1630;
 				TargetAttributes = {
 					430F97592DDADB6100AA7F13 = {
@@ -256,6 +327,9 @@
 					430F97702DDADB6200AA7F13 = {
 						CreatedOnToolsVersion = 16.3;
 						TestTargetID = 430F97592DDADB6100AA7F13;
+					};
+					43C723002E390C7500069588 = {
+						CreatedOnToolsVersion = 16.4;
 					};
 				};
 			};
@@ -280,6 +354,7 @@
 				430F97592DDADB6100AA7F13 /* ShakeExchangeTest */,
 				430F97662DDADB6200AA7F13 /* ShakeExchangeTestTests */,
 				430F97702DDADB6200AA7F13 /* ShakeExchangeTestUITests */,
+				43C723002E390C7500069588 /* ShakeExchangeMeetNotification */,
 			);
 		};
 /* End PBXProject section */
@@ -300,6 +375,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		430F976F2DDADB6200AA7F13 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		43C722FF2E390C7500069588 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -330,6 +412,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		43C722FD2E390C7500069588 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -342,6 +431,11 @@
 			isa = PBXTargetDependency;
 			target = 430F97592DDADB6100AA7F13 /* ShakeExchangeTest */;
 			targetProxy = 430F97722DDADB6200AA7F13 /* PBXContainerItemProxy */;
+		};
+		43C723072E390C7500069588 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 43C723002E390C7500069588 /* ShakeExchangeMeetNotification */;
+			targetProxy = 43C723062E390C7500069588 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -472,8 +566,9 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = ShakeExchangeTest/ShakeExchangeTest.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = 6YDNZ38C3W;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -489,7 +584,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.2;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.matassy.ShakeExchangeTest.ShakeExchangeTest;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -503,8 +598,9 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = ShakeExchangeTest/ShakeExchangeTest.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = 6YDNZ38C3W;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -520,7 +616,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.2;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.matassy.ShakeExchangeTest.ShakeExchangeTest;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -601,6 +697,58 @@
 			};
 			name = Release;
 		};
+		43C7230A2E390C7500069588 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 6YDNZ38C3W;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ShakeExchangeMeetNotification/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ShakeExchangeMeetNotification;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.matassy.ShakeExchangeTest.ShakeExchangeTest.ShakeExchangeMeetNotification;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		43C7230B2E390C7500069588 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 6YDNZ38C3W;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ShakeExchangeMeetNotification/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ShakeExchangeMeetNotification;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.matassy.ShakeExchangeTest.ShakeExchangeTest.ShakeExchangeMeetNotification;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -636,6 +784,15 @@
 			buildConfigurations = (
 				430F97822DDADB6200AA7F13 /* Debug */,
 				430F97832DDADB6200AA7F13 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		43C723092E390C7500069588 /* Build configuration list for PBXNativeTarget "ShakeExchangeMeetNotification" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				43C7230A2E390C7500069588 /* Debug */,
+				43C7230B2E390C7500069588 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
