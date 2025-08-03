@@ -27,6 +27,7 @@
 		4338635A2E166F0D0033A293 /* FirebaseStorageCombine-Community in Frameworks */ = {isa = PBXBuildFile; productRef = 433863592E166F0D0033A293 /* FirebaseStorageCombine-Community */; };
 		433864022E277FDF0033A293 /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = 433864012E277FDF0033A293 /* GoogleMobileAds */; };
 		43C723082E390C7500069588 /* ShakeExchangeMeetNotification.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 43C723012E390C7500069588 /* ShakeExchangeMeetNotification.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		43C723132E3F937F00069588 /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = 43C723122E3F937F00069588 /* MarkdownUI */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -144,6 +145,7 @@
 				433863462E166F0D0033A293 /* FirebaseAppDistribution-Beta in Frameworks */,
 				4338635A2E166F0D0033A293 /* FirebaseStorageCombine-Community in Frameworks */,
 				433863542E166F0D0033A293 /* FirebaseInAppMessaging-Beta in Frameworks */,
+				43C723132E3F937F00069588 /* MarkdownUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -234,6 +236,7 @@
 				433863572E166F0D0033A293 /* FirebaseStorage */,
 				433863592E166F0D0033A293 /* FirebaseStorageCombine-Community */,
 				433864012E277FDF0033A293 /* GoogleMobileAds */,
+				43C723122E3F937F00069588 /* MarkdownUI */,
 			);
 			productName = ShakeExchangeTest;
 			productReference = 430F975A2DDADB6100AA7F13 /* ShakeExchangeTest.app */;
@@ -345,6 +348,7 @@
 			packageReferences = (
 				433863362E166F0C0033A293 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 				433864002E277FDF0033A293 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */,
+				43C723112E3F937F00069588 /* XCRemoteSwiftPackageReference "MarkdownUI" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 430F975B2DDADB6100AA7F13 /* Products */;
@@ -568,13 +572,14 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = ShakeExchangeTest/ShakeExchangeTest.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = 6YDNZ38C3W;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ShakeExchangeTest/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "カメラを使用して撮影するために必要です。";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "近くのユーザーとの接続のためにローカルネットワークを使用します";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "再会時の場所を記録するために位置情報を使用します";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -584,7 +589,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.0;
+				MARKETING_VERSION = 1.1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.matassy.ShakeExchangeTest.ShakeExchangeTest;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -600,13 +605,14 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = ShakeExchangeTest/ShakeExchangeTest.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = 6YDNZ38C3W;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ShakeExchangeTest/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "カメラを使用して撮影するために必要です。";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "近くのユーザーとの接続のためにローカルネットワークを使用します";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "再会時の場所を記録するために位置情報を使用します";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -616,7 +622,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.0;
+				MARKETING_VERSION = 1.1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.matassy.ShakeExchangeTest.ShakeExchangeTest;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -816,6 +822,14 @@
 				minimumVersion = 12.7.0;
 			};
 		};
+		43C723112E3F937F00069588 /* XCRemoteSwiftPackageReference "MarkdownUI" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/gonzalezreal/MarkdownUI";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.4.1;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -913,6 +927,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 433864002E277FDF0033A293 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */;
 			productName = GoogleMobileAds;
+		};
+		43C723122E3F937F00069588 /* MarkdownUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 43C723112E3F937F00069588 /* XCRemoteSwiftPackageReference "MarkdownUI" */;
+			productName = MarkdownUI;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

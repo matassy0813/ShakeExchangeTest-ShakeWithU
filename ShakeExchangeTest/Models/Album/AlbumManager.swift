@@ -24,6 +24,8 @@ class AlbumManager: ObservableObject {
     
     var outerImageURL: String?
     var outerImageData: UIImage?
+    
+    private let maxPhotosPerLoad = 100 // 一括ロードを防ぐ
 
     private init() {
         db = Firestore.firestore()
@@ -167,25 +169,57 @@ class AlbumManager: ObservableObject {
     /// 現在のユーザーが見るべき共有フィード写真をFirestoreから読み込みます。
     /// - Parameter userId: 現在のユーザーのUUID
     /// - Returns: AlbumPhotoの配列
-    func loadSharedFeedPhotos(for userId: String) async throws -> [AlbumPhoto] {
+//    func loadSharedFeedPhotos(for userId: String, limit: Int = 30) async throws -> [AlbumPhoto] {
+//        let feedPhotosCollectionRef = db.collection("feedPhotos")
+//        
+//        do {
+//            // viewerUUIDs 配列に自分のUUIDが含まれている写真をクエリ
+//            let querySnapshot = try await feedPhotosCollectionRef
+//                                        .whereField("viewerUUIDs", arrayContains: userId)
+//                                        .order(by: "date", descending: true)
+//                                        .limit(to: limit)
+//                                        .getDocuments()
+//            
+//            let photos = try querySnapshot.documents.map { document in
+//                try document.data(as: AlbumPhoto.self)
+//            }
+//            print("[AlbumManager] ✅ 共有フィード写真読み込み成功 (\(photos.count)件) for user: \(userId)")
+//            return photos
+//        } catch {
+//            print("[AlbumManager] ❌ 共有フィード写真読み込み失敗: \(error.localizedDescription)")
+//            throw PhotoError.firestoreLoadFailed(error)
+//        }
+//    }
+    /// 共有フィード写真を読み込む（件数制限＆ページング対応）
+    /// - Parameters:
+    ///   - userId: 現在のユーザーUUID
+    ///   - limit: 読み込み上限件数（デフォルト30）
+    ///   - startAfter: 前回の最後のドキュメントスナップショット（任意）
+    /// - Returns: AlbumPhoto配列と次回の読み込み開始点
+    func loadSharedFeedPhotos(for userId: String, limit: Int = 30, startAfter: DocumentSnapshot? = nil) async throws -> ([AlbumPhoto], DocumentSnapshot?) {
         let feedPhotosCollectionRef = db.collection("feedPhotos")
-        
+            .whereField("viewerUUIDs", arrayContains: userId)
+            .order(by: "date", descending: true)
+            .limit(to: limit)
+
+        let query = startAfter != nil
+            ? feedPhotosCollectionRef.start(afterDocument: startAfter!)
+            : feedPhotosCollectionRef
+
         do {
-            // viewerUUIDs 配列に自分のUUIDが含まれている写真をクエリ
-            let querySnapshot = try await feedPhotosCollectionRef
-                                        .whereField("viewerUUIDs", arrayContains: userId)
-                                        .getDocuments()
-            
+            let querySnapshot = try await query.getDocuments()
             let photos = try querySnapshot.documents.map { document in
                 try document.data(as: AlbumPhoto.self)
             }
             print("[AlbumManager] ✅ 共有フィード写真読み込み成功 (\(photos.count)件) for user: \(userId)")
-            return photos
+            return (photos, querySnapshot.documents.last)
         } catch {
             print("[AlbumManager] ❌ 共有フィード写真読み込み失敗: \(error.localizedDescription)")
             throw PhotoError.firestoreLoadFailed(error)
         }
     }
+
+
 
     func downloadImageWithSignedURL(photoId: String, completion: @escaping (UIImage?) -> Void) {
         let functions = Functions.functions()
@@ -214,6 +248,29 @@ class AlbumManager: ObservableObject {
             }.resume()
         }
     }
+    
+    /// アルバムをページング付きで読み込む（最初のロード量制限付き）
+    /// - Parameters:
+    ///   - limit: 最大取得件数（デフォルト: 30）
+    ///   - startAfter: 続きから取得するためのDocumentSnapshot
+    /// - Returns: 写真配列と、次のページの開始点になるDocumentSnapshot
+    func loadMyAlbumPhotos(limit: Int = 30, startAfter: DocumentSnapshot? = nil) async throws -> ([AlbumPhoto], DocumentSnapshot?) {
+        guard let userId = auth.currentUser?.uid else { return ([], nil) }
+
+        var query = db.collection("users").document(userId).collection("albums")
+            .order(by: "date", descending: true)
+            .limit(to: limit)
+
+        if let last = startAfter {
+            query = query.start(afterDocument: last)
+        }
+
+        let snapshot = try await query.getDocuments()
+        let photos = try snapshot.documents.map { try $0.data(as: AlbumPhoto.self) }
+        return (photos, snapshot.documents.last)
+    }
+
+
 
     // MARK: - Storageからの画像ダウンロード
     /// Firebase Storageから画像をダウンロードします。

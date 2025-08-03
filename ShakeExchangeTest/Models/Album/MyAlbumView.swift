@@ -148,7 +148,7 @@ struct MyAlbumView: View {
         errorMessage = nil
         Task {
             do {
-                let fetchedPhotos = try await AlbumManager.shared.loadMyAlbumPhotos()
+                let (fetchedPhotos, _) = try await AlbumManager.shared.loadMyAlbumPhotos(limit: 30)
                 DispatchQueue.main.async {
                     self.photos = fetchedPhotos
                     self.isLoading = false

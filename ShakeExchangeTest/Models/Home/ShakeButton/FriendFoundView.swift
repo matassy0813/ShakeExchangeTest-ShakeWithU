@@ -7,6 +7,7 @@
 
 import SwiftUI
 import FirebaseFirestore
+import CoreLocation
 
 struct FriendFoundView: View {
     var receivedUser: CurrentUser
@@ -20,7 +21,8 @@ struct FriendFoundView: View {
     @State private var navigateToCamera = false // カメラビューへの遷移フラグ
     @State private var encounterCount: Int? = nil
     @State private var isNewFriend: Bool // 新規フレンドかどうかを管理
-
+    
+    @StateObject private var locationManager = LocationManager()
 
     @Environment(\.presentationMode) var presentationMode // このビューを閉じるため
 
@@ -253,7 +255,6 @@ struct FriendFoundView: View {
                         "encounterCount": 1,
                         "lastInteracted": todayString,
                         "streakCount": 1,
-                        "lastStreakDate": todayString
                     ], merge: true)
 
                     FriendManager.shared.updateLocalEncounterCount(for: receivedUser.uuid, to: 1)
@@ -264,7 +265,60 @@ struct FriendFoundView: View {
                 }
             }
         }
+        .onReceive(locationManager.$location.compactMap { $0 }) { coordinate in
+            print("📍 Firestore記録を開始（座標取得済み）")
+            saveEncounterWithLocation(coordinate: coordinate)
+        }
     }
+    
+    func saveEncounterWithLocation(coordinate: CLLocationCoordinate2D) {
+        let userId = AuthManager.shared.userId ?? "unknown"
+        let docRef = Firestore.firestore()
+            .collection("users")
+            .document(userId)
+            .collection("friends")
+            .document(receivedUser.uuid)
+
+        let today = Date()
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let todayString = formatter.string(from: today)
+
+        let latitude = coordinate.latitude
+        let longitude = coordinate.longitude
+
+        docRef.getDocument { (document, error) in
+            var newEncounterCount = 1
+            var newStreakCount = 1
+
+            if let document = document, document.exists {
+                let currentCount = document.get("encounterCount") as? Int ?? 0
+                newEncounterCount = currentCount + 1
+                let lastStreakDateStr = document.get("lastStreakDate") as? String ?? ""
+                let previousStreakCount = document.get("streakCount") as? Int ?? 0
+
+                if let lastStreakDate = formatter.date(from: lastStreakDateStr) {
+                    let daysSinceLast = Calendar.current.dateComponents([.day], from: lastStreakDate, to: today).day ?? 999
+                    newStreakCount = (daysSinceLast <= 3) ? previousStreakCount + 1 : 1
+                }
+            }
+
+            docRef.setData([
+                "encounterCount": newEncounterCount,
+                "lastInteracted": todayString,
+                "streakCount": newStreakCount,
+                "lastStreakDate": todayString,
+                "lastLocation": GeoPoint(latitude: latitude, longitude: longitude)
+            ], merge: true)
+
+            FriendManager.shared.updateLocalEncounterCount(for: receivedUser.uuid, to: newEncounterCount)
+            FriendManager.shared.updateStreakCount(for: receivedUser.uuid, to: newStreakCount)
+            encounterCount = newEncounterCount
+
+            print("[FriendFoundView] ✅ Firestoreに記録しました (lat: \(latitude), lon: \(longitude))")
+        }
+    }
+
     
     func loadUserIcon(named filename: String) -> UIImage? {
         let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]

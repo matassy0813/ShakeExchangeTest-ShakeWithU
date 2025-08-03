@@ -85,12 +85,12 @@ class FeedManager: ObservableObject {
 
         do {
             // MARK: 1. 自分が撮影した友達との写真をロード
-            let myPhotosWithFriends = try await AlbumManager.shared.loadMyAlbumPhotos()
+            let (myPhotosWithFriends, _) = try await AlbumManager.shared.loadMyAlbumPhotos(limit: 50)
             allFeedPhotos.append(contentsOf: myPhotosWithFriends)
             print("[FeedManager] ✅ 自分が撮影した友達との写真ロード完了: \(myPhotosWithFriends.count)件")
 
             // MARK: 2. 共有フィード写真（友達が撮影した自分との写真など）をロード
-            let sharedPhotos = try await AlbumManager.shared.loadSharedFeedPhotos(for: userId)
+            let (sharedPhotos, lastSnapshot) = try await AlbumManager.shared.loadSharedFeedPhotos(for: userId, limit: 30)
             allFeedPhotos.append(contentsOf: sharedPhotos)
             print("[FeedManager] ✅ 共有フィード写真ロード完了: \(sharedPhotos.count)件")
 

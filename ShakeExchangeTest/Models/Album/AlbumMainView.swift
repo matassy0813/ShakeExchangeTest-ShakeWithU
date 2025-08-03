@@ -166,7 +166,7 @@ struct AlbumMainView: View {
         myRecentPhotosErrorMessage = nil
         Task {
             do {
-                let fetchedPhotos = try await AlbumManager.shared.loadMyAlbumPhotos()
+                let (fetchedPhotos, _) = try await AlbumManager.shared.loadMyAlbumPhotos(limit: 30)
                 DispatchQueue.main.async {
                     // 日付の新しい順にソートして、最新のものを取得
                     self.myRecentPhotos = fetchedPhotos.sorted(by: { $0.date > $1.date })
