@@ -59,6 +59,38 @@ class FriendManager: ObservableObject {
             print("[FriendManager] ⚠️ 既存フレンドのため追加スキップ: \(friend.name) (\(friend.uuid))")
         }
     }
+    
+    // FriendManager.swift 内の class FriendManager 末尾あたりに追加
+    // MARK: - 単一フレンド削除
+    func deleteFriend(uuid: String) async {
+        guard let userId = AuthManager.shared.userId else {
+            print("[FriendManager] ⚠️ User IDが未設定のためフレンドを削除できません。UUID: \(uuid)")
+            return
+        }
+        let friendRef = db.collection("users").document(userId).collection("friends").document(uuid)
+
+        do {
+            try await friendRef.delete()
+            print("[FriendManager] 🗑️ Firestoreからフレンドを削除しました: \(uuid)")
+
+            // ローカルも即時反映（リスナー待ちにせずUX向上）
+            if let index = friends.firstIndex(where: { $0.uuid == uuid }) {
+                await MainActor.run {
+                    self.friends.remove(at: index)
+                    self.saveFriendsToUserDefaults()
+                    print("[FriendManager] 🗑️ ローカルからフレンドを削除しました: \(uuid)")
+                }
+            }
+        } catch {
+            print("[FriendManager] ❌ フレンド削除失敗: \(error.localizedDescription)")
+        }
+    }
+
+    // 使い分けしやすいようにオーバーロードも用意
+    func deleteFriend(_ friend: Friend) async {
+        await deleteFriend(uuid: friend.uuid)
+    }
+
 
     // MARK: - 既知フレンドかどうか判定
     func isExistingFriend(uuid: String) -> Bool {

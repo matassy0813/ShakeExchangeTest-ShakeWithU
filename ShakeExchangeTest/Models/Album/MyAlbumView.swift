@@ -96,7 +96,7 @@ struct MyAlbumView: View {
                 } else {
                     // 🧾 アルバム一覧（横スクロール）
                     ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(alignment: .center, spacing: 24) { // alignmentを.centerに調整
+                        LazyHStack(alignment: .center, spacing: 24) { // alignmentを.centerに調整
                             ForEach(sortedPhotos) { photo in
                                 // GeometryReader と rotation3DEffect を削除
                                 AlbumCardView(
@@ -115,6 +115,7 @@ struct MyAlbumView: View {
                                 // Yオフセットは残す (ランダムな配置は維持)
                                 .offset(y: CGFloat.random(in: -40...40)) // Yオフセットの範囲を調整
                                 .frame(width: 180, height: 220) // AlbumCardViewのフレームと同じにする
+                                
                             }
                         }
                         .padding(.horizontal, 20) // 横パディング

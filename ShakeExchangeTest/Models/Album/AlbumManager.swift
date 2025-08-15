@@ -146,23 +146,31 @@ class AlbumManager: ObservableObject {
     }
     
     // MARK: - 友達のアルバム写真の読み込み
-    /// 特定の友達と自分が写っている写真をFirestoreから読み込みます。
-    /// これは、その友達のアルバム（自分が撮影したその友達との写真）と、
-    /// その友達が撮影した自分との写真の両方を含む可能性があります。
-    /// 現時点では、自分のアルバムからその友達との写真のみをフィルタリングします。
-    /// 将来的には、友達の公開アルバムからも写真を読み込むロジックを追加できます。
-    func loadFriendAlbumPhotos(friendUUID: String) async throws -> [AlbumPhoto] {
-        guard let userId = auth.currentUser?.uid else {
-            print("[AlbumManager] ⚠️ 友達アルバム読み込み失敗: ユーザーが認証されていません。")
-            return []
-        }
+    /// 特定の友達との写真をページング付きで読み込む
+    /// - Parameters:
+    ///   - friendUUID: 友達のUUID
+    ///   - limit: 一度に読み込む写真の数
+    ///   - lastDocument: 前回の読み込みの最後のドキュメント
+    /// - Returns: 写真の配列と、次の読み込みに使うための最後のドキュメント
+    func loadFriendAlbumPhotos(friendUUID: String, limit: Int = 20, startAfter lastDocument: DocumentSnapshot? = nil) async throws -> ([AlbumPhoto], DocumentSnapshot?) {
+        guard let userId = auth.currentUser?.uid else { return ([], nil) }
 
-        // 自分のアルバムから、指定されたfriendUUIDを持つ写真のみをフィルタリング
-        let myPhotos = try await loadMyAlbumPhotos()
-        let friendPhotos = myPhotos.filter { $0.friendUUID == friendUUID }
+        // "自分のアルバム"の中から"特定の友達"との写真だけをクエリで絞り込む
+        var query: Query = db.collection("users").document(userId).collection("albums")
+            .whereField("friendUUID", isEqualTo: friendUUID)
+            .order(by: "date", descending: true)
+            .limit(to: limit)
+
+        if let lastDocument = lastDocument {
+            query = query.start(afterDocument: lastDocument)
+        }
         
-        print("[AlbumManager] ✅ 友達アルバム写真読み込み成功 (\(friendPhotos.count)件) for friend: \(friendUUID)")
-        return friendPhotos
+        let snapshot = try await query.getDocuments()
+        // compactMapでデコード失敗したものを安全に除外
+        let photos = try snapshot.documents.compactMap { try $0.data(as: AlbumPhoto.self) }
+            
+        print("[AlbumManager] ✅ 友達(\(friendUUID))のアルバム写真ページング読み込み成功 (\(photos.count)件)")
+        return (photos, snapshot.documents.last)
     }
 
     // MARK: - 共有フィード写真の読み込み (新しく追加)
@@ -254,19 +262,23 @@ class AlbumManager: ObservableObject {
     ///   - limit: 最大取得件数（デフォルト: 30）
     ///   - startAfter: 続きから取得するためのDocumentSnapshot
     /// - Returns: 写真配列と、次のページの開始点になるDocumentSnapshot
-    func loadMyAlbumPhotos(limit: Int = 30, startAfter: DocumentSnapshot? = nil) async throws -> ([AlbumPhoto], DocumentSnapshot?) {
+    // AlbumManager.swift に追加
+
+    // 自分のアルバム用
+    func loadMyAlbumPhotos(limit: Int = 20, startAfter lastDocument: DocumentSnapshot? = nil) async throws -> ([AlbumPhoto], DocumentSnapshot?) {
         guard let userId = auth.currentUser?.uid else { return ([], nil) }
 
         var query = db.collection("users").document(userId).collection("albums")
             .order(by: "date", descending: true)
             .limit(to: limit)
 
-        if let last = startAfter {
-            query = query.start(afterDocument: last)
+        if let lastDocument = lastDocument {
+            query = query.start(afterDocument: lastDocument)
         }
 
         let snapshot = try await query.getDocuments()
-        let photos = try snapshot.documents.map { try $0.data(as: AlbumPhoto.self) }
+        let photos = try snapshot.documents.compactMap { try $0.data(as: AlbumPhoto.self) }
+        
         return (photos, snapshot.documents.last)
     }
 
@@ -276,28 +288,34 @@ class AlbumManager: ObservableObject {
     /// Firebase Storageから画像をダウンロードします。
     /// - Parameter storagePath: Storage上のファイルのパス (例: "users/UID/photos/PHOTO_UUID/filename.jpg")
     /// - Returns: ダウンロードされたUIImage、またはnil
+    // AlbumManager.swift の downloadImage 関数を修正
+
     func downloadImage(from storagePath: String) async -> UIImage? {
         // Storageパスが空の場合はダウンロードしない
         guard !storagePath.isEmpty else { return nil }
 
+        // 1. キャッシュを確認
+        if let cachedImage = ImageCacheManager.shared.get(for: storagePath) {
+            // print("✅ [ImageCache] キャッシュから画像を取得: \(storagePath)")
+            return cachedImage
+        }
+
         let storageRef = storage.reference(withPath: storagePath)
-        
-        // 最大ダウンロードサイズを10MBに設定
         let maxSize: Int64 = 10 * 1024 * 1024
-        
-        // withCheckedContinuation を使ってコールバックベースの API を async/await に変換
-        return await withCheckedContinuation { continuation in
-            storageRef.getData(maxSize: maxSize) { data, error in
-                if let error = error {
-                    print("[AlbumManager] ❌ 画像ダウンロード失敗 (\(storagePath)): \(error.localizedDescription)")
-                    continuation.resume(returning: nil)
-                } else if let data = data {
-                    continuation.resume(returning: UIImage(data: data))
-                } else {
-                    print("[AlbumManager] ❌ 画像データが見つかりません (\(storagePath))")
-                    continuation.resume(returning: nil)
-                }
+
+        // 2. キャッシュになければダウンロード
+        do {
+            let data = try await storageRef.data(maxSize: maxSize)
+            if let image = UIImage(data: data) {
+                // 3. ダウンロードした画像をキャッシュに保存
+                ImageCacheManager.shared.set(image, for: storagePath)
+                // print("📥 [ImageCache] 新規ダウンロード＆キャッシュ保存: \(storagePath)")
+                return image
             }
+            return nil
+        } catch {
+            print("❌ 画像ダウンロード失敗 (\(storagePath)): \(error.localizedDescription)")
+            return nil
         }
     }
 
