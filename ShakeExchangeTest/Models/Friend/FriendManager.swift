@@ -15,7 +15,7 @@ class FriendManager: ObservableObject {
 
     @Published var friends: [Friend] = []
 
-    private var db: Firestore!
+    public var db: Firestore!
     private var auth: Auth!
     private var friendsListener: ListenerRegistration?
     private let userDefaultsKey = "SavedFriends"
@@ -330,4 +330,6 @@ class FriendManager: ObservableObject {
             print("[FriendManager] ❌ 全フレンドデータ削除失敗: \(error.localizedDescription)")
         }
     }
+    
+    
 }

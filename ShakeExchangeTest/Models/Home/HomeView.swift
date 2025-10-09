@@ -18,7 +18,8 @@ struct HomeView: View {
         NavigationView {
             FeedView() // ← FeedView を使う
                 .background(Color.black)
-                .navigationTitle("Shake")
+                .navigationTitle("Main")
+                .foregroundColor(.white)
                 .navigationBarItems(
                     // カメラボタンと紙飛行機ボタンを削除
                     trailing: HStack {
@@ -119,4 +120,6 @@ struct HomeView: View {
         .navigationViewStyle(StackNavigationViewStyle())
     }
 }
-
+#Preview {
+    
+}

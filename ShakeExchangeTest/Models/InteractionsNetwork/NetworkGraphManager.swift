@@ -18,12 +18,20 @@ class NetworkGraphManager: ObservableObject {
 
     // Firebase Functions のインスタンス (Singleton として持つか、DI を検討)
     private let functions = Functions.functions(region: "us-central1") // リージョンはFunctionsに合わせてください
+    
+    private var isLoadingGraph = false
 
     // MARK: - ネットワークグラフのロード
     func loadNetworkGraph(for userId: String) async {
+        guard !isLoadingGraph else { return }
+        isLoadingGraph = true
         DispatchQueue.main.async {
             self.isLoading = true
             self.errorMessage = nil
+        }
+        defer {
+            DispatchQueue.main.async { self.isLoading = false }
+            isLoadingGraph = false
         }
 
         print("[NetworkGraphManager] 🚀 Loading network graph for userId: \(userId)")

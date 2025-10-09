@@ -14,6 +14,8 @@ import UserNotifications
 import FirebaseMessaging
 import FirebaseFirestore
 
+import UIKit
+
 // MARK: - AppDelegate: Firebaseの初期化を担当
 // UIResponderとUIApplicationDelegateに準拠
 class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate, MessagingDelegate{
@@ -101,6 +103,19 @@ class MyAppCheckProviderFactory: NSObject, AppCheckProviderFactory {
 @main
 struct ShakeExchangeTestApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
+    init() {
+        let nav = UINavigationBarAppearance()
+        nav.configureWithOpaqueBackground()
+        nav.backgroundColor = .black                  // 背景を黒
+        nav.titleTextAttributes = [.foregroundColor: UIColor.white]
+        nav.largeTitleTextAttributes = [.foregroundColor: UIColor.white]
+
+        let bar = UINavigationBar.appearance()
+        bar.standardAppearance = nav
+        bar.scrollEdgeAppearance = nav
+        bar.compactAppearance = nav
+        bar.tintColor = .white                        // 戻る矢印/ボタンも白
+    }
 
     @StateObject var authManager = AuthManager.shared
     @StateObject var profileManager = ProfileManager.shared
@@ -130,6 +145,8 @@ struct ShakeExchangeTestApp: App {
                         }
                 }
             }
+            .preferredColorScheme(.dark)  // ← 追加：全体をダーク基調に
+            .tint(.white)  
             .onAppear {
                 Task {
                     await authManager.checkSessionValidity()

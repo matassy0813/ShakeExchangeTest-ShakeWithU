@@ -31,7 +31,7 @@ struct FriendAlbumCardView: View {
             Text(friend.name)
                 .font(.headline)
                 .fontWeight(.medium)
-                .foregroundColor(.primary) // システムデフォルト色に
+                .foregroundColor(.black) // システムデフォルト色に
 
             Spacer()
 

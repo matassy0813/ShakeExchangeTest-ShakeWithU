@@ -66,6 +66,7 @@ struct FeedView: View {
                 }
                 .background(Color.black.ignoresSafeArea())
                 .navigationTitle("Feed")
+                .foregroundColor(.white)
                 //            .navigationBarItems(
                 //                leading: Image(systemName: "camera"), // カメラアイコン
                 //                trailing: Image(systemName: "paperplane") // メッセージアイコン

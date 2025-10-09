@@ -19,6 +19,9 @@ struct SocialNetworkView: View {
     @Environment(\.presentationMode) var presentationMode //
     @State private var selectedNodeForMeet: NetworkNode? = nil
     
+    @State private var lastUIFlush: CFAbsoluteTime = CFAbsoluteTimeGetCurrent()
+    private let uiFlushInterval: CFTimeInterval = 0.10
+    
     var currentUserId: String { //
         Auth.auth().currentUser?.uid ?? "" //
     }
@@ -60,11 +63,15 @@ struct SocialNetworkView: View {
         ZStack { //
             Color.black.ignoresSafeArea()  // 背景色
 
-            if networkGraphManager.isLoading { //
-                ProgressView("Building Network...") //
-                    .progressViewStyle(CircularProgressViewStyle()) //
-                    .scaleEffect(1.5) //
-                    .foregroundColor(.white) //
+            // SocialNetworkView.swift の body 内、読み込み中の表示
+            if networkGraphManager.isLoading {
+                VStack(spacing: 16) {
+                    SpinnerView()  // ← ここだけ差し替え
+                    Text("Building Network...")
+                        .font(.title2).bold()
+                        .foregroundColor(.white.opacity(0.85))
+                }
+                .padding(.top, 40)
             } else if networkGraphManager.errorMessage != nil { //
                 ContentUnavailableView( //
                     "Error Loading Network", //
@@ -124,13 +131,18 @@ struct SocialNetworkView: View {
                             }
                         }
                     }
+                    .allowsHitTesting(false)
                     // ノードの描画
                     ForEach(networkGraphManager.socialNetworkGraph.nodes.values.sorted(by: { $0.distance < $1.distance })) { node in //
                         nodeView(for: node) //
                     }
                 }
+                .compositingGroup()
+                .drawingGroup()
             }
         }
+        .compositingGroup()
+        .drawingGroup()
         .sheet(item: $selectedNodeForMeet) { node in
             MeetMessageView(targetNode: node, onSend: { message in
                 networkGraphManager.sendMeet(to: node.id, message: message)
@@ -284,9 +296,14 @@ struct SocialNetworkView: View {
                     startSimulation() //
                 }
         )
+        .transaction { txn in
+            // 物理シミュが毎フレーム座標を更新する部分だけは"瞬時描画"に
+            txn.animation = nil
+        }
         .onTapGesture { //
             handleNodeTap(node: displayNode) //
         }
+        .transaction { $0.animation = nil }
         /*.opacity(displayNode.distance >= 5 ? 0.0 : 1.0)*/ //
     }
 
@@ -444,6 +461,12 @@ struct SocialNetworkView: View {
         }
         
         networkGraphManager.socialNetworkGraph.nodes = tempNodes //
+        let now = CFAbsoluteTimeGetCurrent()
+        if now - lastUIFlush >= uiFlushInterval {
+            lastUIFlush = now
+            // 同一値を"再代入"して @Published を明示発火（頻度だけ間引く）
+            networkGraphManager.socialNetworkGraph = networkGraphManager.socialNetworkGraph
+        }
     }
 
     // MARK: - 距離に応じたぼかしの計算
@@ -467,4 +490,29 @@ struct SocialNetworkView: View {
             print("🚫 Node too far for meet: \(node.name)")
         }
     }
+    
+    /// 合成やOSに左右されない純SwiftUIスピナー
+    private struct SpinnerView: View {
+        @State private var rotate = false
+
+        var body: some View {
+            Circle()
+                .trim(from: 0.08, to: 0.92) // 円弧
+                .stroke(
+                    AngularGradient(
+                        gradient: Gradient(colors: [
+                            .white.opacity(0.95), .white.opacity(0.25), .white.opacity(0.05), .white.opacity(0.25), .white.opacity(0.95)
+                        ]),
+                        center: .center
+                    ),
+                    style: StrokeStyle(lineWidth: 6, lineCap: .round)
+                )
+                .frame(width: 44, height: 44)
+                .rotationEffect(.degrees(rotate ? 360 : 0))
+                .animation(.linear(duration: 1.0).repeatForever(autoreverses: false), value: rotate)
+                .onAppear { rotate = true }
+                .accessibilityLabel("Loading")
+        }
+    }
+
 }

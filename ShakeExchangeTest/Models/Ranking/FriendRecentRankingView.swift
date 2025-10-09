@@ -22,6 +22,7 @@ struct FriendRecentRankingView: View {
                 }
                 .pickerStyle(SegmentedPickerStyle())
                 .padding(.horizontal)
+                .padding(.top, 100) 
                 
                 if selectedTab == 0 {
                     RankingListView(friends: manager.topFriends, title: "👑 最近よく会ってる人 TOP5")

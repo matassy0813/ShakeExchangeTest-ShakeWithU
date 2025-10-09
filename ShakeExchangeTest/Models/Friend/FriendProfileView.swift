@@ -21,9 +21,19 @@ struct FriendProfileView: View {
     @State private var myPhotosWithFriend: [AlbumPhoto] = []
     @State private var isLoadingPhotos: Bool = true
     @State private var photoLoadError: String? = nil
+    
     @State private var showDeleteConfirm = false
     @Environment(\.dismiss) private var dismiss
-
+    
+    @State private var interactions: [FriendInteraction] = []
+    @State private var isLoadingInteractions: Bool = true
+    @State private var interactionsError: String? = nil
+    
+    // ★ ページング用
+    @State private var interactionsCursor: DocumentSnapshot? = nil
+    @State private var isLoadingMore: Bool = false
+    private let pageSize: Int = 10
+    
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
@@ -80,6 +90,47 @@ struct FriendProfileView: View {
                         .cornerRadius(12)
                         .padding(.horizontal)
                 }
+                // --- 交流履歴セクション（新規） ---
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("📍 交流履歴")
+                        .font(.headline)
+                        .padding(.horizontal)
+
+                    if isLoadingInteractions {
+                        ProgressView("Loading interactions...")
+                            .padding(.horizontal)
+                    } else if let e = interactionsError {
+                        Text("Failed to load interactions: \(e)")
+                            .foregroundColor(.red)
+                            .padding(.horizontal)
+                    } else if interactions.isEmpty {
+                        Text("この友達との交流履歴はまだありません。")
+                            .foregroundColor(.gray)
+                            .padding(.horizontal)
+                    } else {
+                        LazyVStack(spacing: 8) {
+                            ForEach(interactions) { item in
+                                InteractionRowView(item: item)
+                                    .padding(.horizontal)
+                                    .padding(.vertical, 8)
+                                    .background(Color(white: 0.12))
+                                    .cornerRadius(10)
+                                    .onAppear {
+                                        // 最後のセルが出たら次ページ取得
+                                        if item.id == interactions.last?.id {
+                                            Task { await loadMoreInteractionsIfNeeded() }
+                                        }
+                                    }
+                            }
+                            if isLoadingMore {
+                                ProgressView("Loading more…")
+                                    .padding(.vertical, 8)
+                            }
+                        }
+                        .padding(.horizontal)
+                    }
+                }
+                .padding(.bottom, 8)
             }
             .padding(.vertical)
             .background(Color.black)
@@ -89,14 +140,17 @@ struct FriendProfileView: View {
         .navigationTitle("Friend Profile")
         .onAppear {
             loadMyPhotosWithFriend()
+            Task { await loadInteractions() }   // ← これが無いので永遠にLoadingに
         }
         .onChange(of: AuthManager.shared.isAuthenticated) { isAuthenticated in
             if isAuthenticated {
                 loadMyPhotosWithFriend() // 認証状態が変更されたら再ロード
+                Task { await loadInteractions() }
             }
         }
         .onChange(of: friend.uuid) { _ in
             loadMyPhotosWithFriend() // 友達が変わったら再ロード
+            Task { await loadInteractions() }
         }
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -137,6 +191,74 @@ struct FriendProfileView: View {
         let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent(filename)
         return UIImage(contentsOfFile: url.path)
+    }
+    
+    // --- 交流履歴のロード ---
+    private func loadInteractions() async {
+        await MainActor.run {
+            isLoadingInteractions = true
+            interactionsError = nil
+        }
+        do {
+            let items = try await FriendManager.shared.fetchInteractions(for: friend.uuid, limit: 30)
+            await MainActor.run {
+                self.interactions = items
+                self.isLoadingInteractions = false
+            }
+        } catch {
+            await MainActor.run {
+                self.interactionsError = error.localizedDescription
+                self.isLoadingInteractions = false
+            }
+        }
+    }
+    
+    private func loadFirstPage() async {
+        await MainActor.run {
+            isLoadingInteractions = true
+            interactionsError = nil
+            interactions = []
+            interactionsCursor = nil
+        }
+        do {
+            let (items, cursor) = try await FriendManager.shared
+                .fetchInteractionsPage(for: friend.uuid, pageSize: pageSize, startAfter: nil)
+            await MainActor.run {
+                interactions = items
+                interactionsCursor = cursor
+                isLoadingInteractions = false
+            }
+        } catch {
+            await MainActor.run {
+                interactionsError = error.localizedDescription
+                isLoadingInteractions = false
+            }
+        }
+    }
+
+    private func loadMoreInteractionsIfNeeded() async {
+        guard !isLoadingInteractions, !isLoadingMore else { return }
+        guard let cursor = interactionsCursor else { return } // もう次が無い
+
+        await MainActor.run { isLoadingMore = true }
+        do {
+            let (items, next) = try await FriendManager.shared
+                .fetchInteractionsPage(for: friend.uuid, pageSize: pageSize, startAfter: cursor)
+            await MainActor.run {
+                interactions.append(contentsOf: items)
+                interactionsCursor = next
+                isLoadingMore = false
+            }
+        } catch {
+            await MainActor.run {
+                interactionsError = error.localizedDescription
+                isLoadingMore = false
+            }
+        }
+    }
+
+    private func reloadAll() async {
+        await loadFirstPage()
     }
 
     // MARK: - 自分のアルバムからこの友達との写真をロード
