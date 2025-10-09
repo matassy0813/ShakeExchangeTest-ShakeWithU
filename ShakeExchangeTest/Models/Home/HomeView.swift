@@ -19,7 +19,10 @@ struct HomeView: View {
             FeedView() // ← FeedView を使う
                 .background(Color.black)
                 .navigationTitle("Main")
-                .foregroundColor(.white)
+                .navigationBarTitleDisplayMode(.inline)                   // ① 表示モード
+                .toolbarBackground(.visible, for: .navigationBar)         // ② 背景を有効に
+                .toolbarBackground(Color.black, for: .navigationBar)      // ③ 背景を黒に
+                .toolbarColorScheme(.dark, for: .navigationBar)           // ④ タイトル/アイコンを白系に
                 .navigationBarItems(
                     // カメラボタンと紙飛行機ボタンを削除
                     trailing: HStack {

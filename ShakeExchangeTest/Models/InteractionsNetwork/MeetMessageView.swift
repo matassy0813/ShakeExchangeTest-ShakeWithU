@@ -29,7 +29,7 @@ struct MeetMessageView: View {
                         if isSending {
                             ProgressView()
                         } else {
-                            Text("Send meet!!")
+                            Text("meet!!を送ろう🎉")
                         }
                     }
                     .disabled(isSending || message.isEmpty)
@@ -41,6 +41,10 @@ struct MeetMessageView: View {
                 }
             }
             .navigationTitle("Send meet!!")
+            .navigationBarTitleDisplayMode(.inline)                   // ①
+            .toolbarBackground(.visible, for: .navigationBar)         // ②
+            .toolbarBackground(Color.black, for: .navigationBar)      // ③
+            .toolbarColorScheme(.dark, for: .navigationBar)           // ④
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
@@ -49,6 +53,7 @@ struct MeetMessageView: View {
                 }
             }
         }
+        .toolbarColorScheme(.dark, for: .navigationBar)
     }
 
     private func sendMessage() {

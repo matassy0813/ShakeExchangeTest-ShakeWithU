@@ -109,7 +109,6 @@ struct ShakeExchangeTestApp: App {
         nav.backgroundColor = .black                  // 背景を黒
         nav.titleTextAttributes = [.foregroundColor: UIColor.white]
         nav.largeTitleTextAttributes = [.foregroundColor: UIColor.white]
-
         let bar = UINavigationBar.appearance()
         bar.standardAppearance = nav
         bar.scrollEdgeAppearance = nav
