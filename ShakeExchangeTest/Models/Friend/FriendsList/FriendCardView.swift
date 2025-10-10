@@ -113,11 +113,11 @@ struct FriendCardView: View {
             .scaleEffect(isPressed ? 0.98 : 1)
             .animation(.spring(response: 0.35, dampingFraction: 0.8), value: isPressed)
             .contentShape(RoundedRectangle(cornerRadius: 18)) // カード全体をタップ可能に
-            .simultaneousGesture(
-                LongPressGesture(minimumDuration: 0)          // タップ時だけ軽く縮むUI演出
-                    .onChanged { _ in isPressed = true }
-                    .onEnded   { _ in isPressed = false }
-            )
+//            .simultaneousGesture(
+//                LongPressGesture(minimumDuration: 0)          // タップ時だけ軽く縮むUI演出
+//                    .onChanged { _ in isPressed = true }
+//                    .onEnded   { _ in isPressed = false }
+//            )
         }
     }
 

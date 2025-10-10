@@ -73,6 +73,7 @@
 		430F97672DDADB6200AA7F13 /* ShakeExchangeTestTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ShakeExchangeTestTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		430F97712DDADB6200AA7F13 /* ShakeExchangeTestUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ShakeExchangeTestUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		43C723012E390C7500069588 /* ShakeExchangeMeetNotification.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShakeExchangeMeetNotification.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		43D5D58B2E98F293006DAADC /* ShakeExchangeTest.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = ShakeExchangeTest.xctestplan; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -176,6 +177,7 @@
 		430F97512DDADB6100AA7F13 = {
 			isa = PBXGroup;
 			children = (
+				43D5D58B2E98F293006DAADC /* ShakeExchangeTest.xctestplan */,
 				430F975C2DDADB6100AA7F13 /* ShakeExchangeTest */,
 				430F976A2DDADB6200AA7F13 /* ShakeExchangeTestTests */,
 				430F97742DDADB6200AA7F13 /* ShakeExchangeTestUITests */,

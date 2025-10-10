@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ShakeTutorialView: View {
-    let tutorialImages = ["tutorial_slide1", "tutorial_slide2", "tutorial_slide3"] // アセット名をここで列挙
+    let tutorialImages = ["how_to_1", "how_to_2", "how_to_3", "how_to_4", "how_to_5", "how_to_6", "how_to_7", "how_to_8", "how_to_9", "how_to_10", "how_to_11", "how_to_12", "how_to_13", "how_to_14", "how_to_15", "how_to_16", "how_to_17", "how_to_18", "how_to_19"] // アセット名をここで列挙
 
     @Environment(\.presentationMode) var presentationMode
     @State private var currentPage = 0

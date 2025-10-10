@@ -109,7 +109,7 @@ struct FriendsListView: View {
                                             FriendCardView(friend: friend)
                                                 .frame(maxWidth: contentMaxWidth)        // ← 横幅を制限
                                         }
-                                        .buttonStyle(.plain)
+                                        .buttonStyle(CardPressedStyle())
                                         Spacer(minLength: 0)
                                     }
                                 }
@@ -122,6 +122,13 @@ struct FriendsListView: View {
             }
             .navigationTitle("")        // カスタムヘッダを使う
             .navigationBarHidden(true)
+        }
+    }
+    struct CardPressedStyle: ButtonStyle {
+        func makeBody(configuration: Configuration) -> some View {
+            configuration.label
+                .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
+                .animation(.spring(response: 0.25, dampingFraction: 0.8), value: configuration.isPressed)
         }
     }
 }

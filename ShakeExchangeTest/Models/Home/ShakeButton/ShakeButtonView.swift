@@ -203,7 +203,7 @@ struct ShakeButtonView: View {
                                     .font(.title3).fontWeight(.semibold).foregroundColor(.red)
                                 Button {
                                     beginDiscovery()
-                                    MultipeerManager.shared.detectHandshake()
+                                    handleShake()
                                 } label: {
                                     Text("もう一度探す")
                                         .font(.subheadline).fontWeight(.bold)
@@ -245,8 +245,9 @@ struct ShakeButtonView: View {
                             return
                         }
                         beginDiscovery()
+                        handleShake()
                         print("[ShakeButtonView] ボタン押下 → 探索開始")
-                        MultipeerManager.shared.detectHandshake()
+//                        MultipeerManager.shared.detectHandshake()
                     }) {
                         Text("Shake to Connect")
                             .fontWeight(.bold)
@@ -323,23 +324,25 @@ struct ShakeButtonView: View {
 
                 // onAppear 内の onReceiveUser クロージャを次で置き換え
                 MultipeerManager.shared.onReceiveUser = { user in
-                    print("[ShakeButtonView] データ受信: \(user.uuid)")
-                    foundFriendName = user.name
-                    foundFriendImage = user.icon
-                    receivedUser = user
-                    foundFriend = true
-
-                    searchTimeoutTimer?.invalidate()
-                    searchState = .found
-                    hapticNotify(.success) // 🔔 見つかったときのバイブ
-
-                    withAnimation { showBanner = true }
+                    DispatchQueue.main.async {   // ✅ 追加
+                        print("[ShakeButtonView] データ受信: \(user.uuid)")
+                        foundFriendName = user.name
+                        foundFriendImage = user.icon
+                        receivedUser = user
+                        foundFriend = true
+                        searchTimeoutTimer?.invalidate()
+                        searchState = .found
+                        hapticNotify(.success)
+                        withAnimation { showBanner = true }
+                        MultipeerManager.shared.isCommunicating = false
+                    }
                 }
                 searchState = .idle
             }
 
             .onDisappear {
                 print("[ShakeButtonView] 表示終了 → 通信停止")
+                bannerTimer?.invalidate()
                 MultipeerManager.shared.stop()
                 MultipeerManager.shared.onReceiveUser = nil
                 searchTimeoutTimer?.invalidate()

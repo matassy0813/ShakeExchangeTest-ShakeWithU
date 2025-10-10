@@ -10,7 +10,6 @@ import Foundation
 import CoreMotion
 import UIKit // UIImage のために必要
 
-@MainActor
 class MultipeerManager: NSObject, ObservableObject, MCSessionDelegate, MCNearbyServiceAdvertiserDelegate, MCNearbyServiceBrowserDelegate {
     static let shared = MultipeerManager()
     private let serviceType = "shake-connect"
@@ -49,25 +48,29 @@ class MultipeerManager: NSObject, ObservableObject, MCSessionDelegate, MCNearbyS
         browser.startBrowsingForPeers()
     }
 
-    func stop() {
+    @MainActor func stop() {
         advertiser.stopAdvertisingPeer()
         browser.stopBrowsingForPeers()
         resetSession()
         isCommunicating = false
     }
     
-    func resetSession() {
+    @MainActor func resetSession() {
         print("[MultipeerManager] 🔄 セッションリセット開始")
-        session.disconnect()
-//        session = MCSession(peer: myPeerID, securityIdentity: nil, encryptionPreference: .required)
-//        session.delegate = self
-        session = nil
-        // 新しいセッションとdelegateのセットアップ
+
+        let oldSession = session
         let newSession = MCSession(peer: myPeerID, securityIdentity: nil, encryptionPreference: .required)
         newSession.delegate = self
+
+        // 先に差し替える（nil の瞬間を作らない）
         session = newSession
+
+        // 最後に古い方を切断
+        oldSession?.disconnect()
+
         print("[MultipeerManager] ✅ セッション新規作成済み")
     }
+
 
 
     func send(data: Data) {
@@ -104,7 +107,7 @@ class MultipeerManager: NSObject, ObservableObject, MCSessionDelegate, MCNearbyS
     }
 
     // MARK: - MCSessionDelegate
-    func session(_ session: MCSession, peer peerID: MCPeerID, didChange state: MCSessionState) {
+    @MainActor func session(_ session: MCSession, peer peerID: MCPeerID, didChange state: MCSessionState) {
         if state == .connected {
             print("[MultipeerManager] 接続成功 with \(peerID.displayName)")
             sendCurrentUser()
@@ -116,7 +119,7 @@ class MultipeerManager: NSObject, ObservableObject, MCSessionDelegate, MCNearbyS
     }
 
     // CurrentUserデータを送信
-    func sendCurrentUser() {
+    @MainActor func sendCurrentUser() {
         let user = ProfileManager.shared.currentUser
         
         do {
@@ -244,17 +247,25 @@ class MultipeerManager: NSObject, ObservableObject, MCSessionDelegate, MCNearbyS
     }
     
     // 確認メッセージを送信する関数 (syk と ack を統合)
+    // MultipeerManager.swift
     private func sendConfirmationMessage(to peerID: MCPeerID) {
         let payload: [String: Any] = ["type": "syk_ack"]
-        if let data = try? JSONSerialization.data(withJSONObject: payload, options: []) {
-            do {
-                try session.send(data, toPeers: [peerID], with: .reliable)
-                print("[MultipeerManager] 📤 syk_ack 送信")
-            } catch {
-                print("[MultipeerManager] ❌ syk_ack 送信失敗: \(error.localizedDescription)")
-            }
+        guard
+            let data = try? JSONSerialization.data(withJSONObject: payload, options: []),
+            let session = self.session,                       // ✅ nil防止
+            !session.connectedPeers.isEmpty                   // ✅ 接続確認
+        else {
+            print("[MultipeerManager] ⚠️ ack送信スキップ（sessionなし/未接続）")
+            return
+        }
+        do {
+            try session.send(data, toPeers: [peerID], with: .reliable)
+            print("[MultipeerManager] 📤 syk_ack 送信")
+        } catch {
+            print("[MultipeerManager] ❌ syk_ack 送信失敗: \(error.localizedDescription)")
         }
     }
+
     
     func detectHandshake() {
         DispatchQueue.main.async {
@@ -268,7 +279,8 @@ class MultipeerManager: NSObject, ObservableObject, MCSessionDelegate, MCNearbyS
 
             // 4秒後に検知可能状態に戻す (ただし、接続が完了したら stop() でリセットされるため、このタイマーは補助的なもの)
             DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
-                if !self.session.connectedPeers.isEmpty {
+                let connected = !(self.session?.connectedPeers.isEmpty ?? true)
+                if connected {
                     print("[MultipeerManager] 🕓 検知リセット (接続中)")
                 } else {
                     self.isHandshakeDetected = false
