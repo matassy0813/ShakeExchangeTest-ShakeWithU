@@ -153,11 +153,15 @@ struct FeedItemView: View {
                     }
                 }
             }
-
-            DispatchQueue.main.async {
+            await MainActor.run { // MainActorでUIを更新
                 self.outerImage = loadedImage
                 self.isLoadingImage = false
             }
+
+//            DispatchQueue.main.async {
+//                self.outerImage = loadedImage
+//                self.isLoadingImage = false
+//            }
         }
     }
 

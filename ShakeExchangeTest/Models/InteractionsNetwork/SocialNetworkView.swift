@@ -38,6 +38,10 @@ struct SocialNetworkView: View {
     let currentUserNodeSize: CGFloat = 80 //
     let iconSize: CGFloat = 40 //
     let currentUserIconSize: CGFloat = 60 //
+    // MARK: - 【追加】シミュレーション停止判定用プロパティ
+    private let movementThreshold: CGFloat = 0.5 // ノードの平均移動量がこの値以下になったら停止
+    private let stabilizationDelay: Int = 30 // 閾値以下が連続したフレーム数 (約1秒)
+    private var stabilizationCount: Int = 0
 
     @State private var viewSize: CGSize = .zero // ビュー全体のサイズを保持
     @State private var simulationTimer: Timer? // シミュレーションを駆動するタイマー
@@ -447,6 +451,10 @@ struct SocialNetworkView: View {
 
             let effectiveDamping = (networkGraphManager.socialNetworkGraph.nodes[id]?.distance ?? 0) <= 3 ? damping : 0.98 //
             let effectiveTimeStep = (networkGraphManager.socialNetworkGraph.nodes[id]?.distance ?? 0) <= 3 ? timeStep : 0.1 //
+            
+            // 5. 速度と位置の更新 (Euler Integration) と減衰
+            var totalMovement: CGFloat = 0 // 【追加】移動量合計のトラッキング
+            let nodesCount = CGFloat(tempNodes.keys.count)
 
             node.velocity.dx = (node.velocity.dx + node.force.dx * effectiveTimeStep) * effectiveDamping //
             node.velocity.dy = (node.velocity.dy + node.force.dy * effectiveTimeStep) * effectiveDamping //
@@ -468,6 +476,7 @@ struct SocialNetworkView: View {
             // 同一値を"再代入"して @Published を明示発火（頻度だけ間引く）
             networkGraphManager.socialNetworkGraph = networkGraphManager.socialNetworkGraph
         }
+        
     }
 
     // MARK: - 距離に応じたぼかしの計算

@@ -166,7 +166,8 @@ struct AlbumMainView: View {
         myRecentPhotosErrorMessage = nil
         Task {
             do {
-                let (fetchedPhotos, _) = try await AlbumManager.shared.loadMyAlbumPhotos(limit: 30)
+                let maxPhotosToLoad = 10
+                let (fetchedPhotos, _) = try await AlbumManager.shared.loadMyAlbumPhotos(limit: maxPhotosToLoad) 
                 DispatchQueue.main.async {
                     // 日付の新しい順にソートして、最新のものを取得
                     self.myRecentPhotos = fetchedPhotos.sorted(by: { $0.date > $1.date })
@@ -241,9 +242,18 @@ struct AlbumImageView: View {
         isLoading = true
         image = nil // 古い画像をクリア
         Task {
+            // AlbumManager.shared.downloadImage は非同期（バックグラウンド）で実行される
             let loadedImage = await AlbumManager.shared.downloadImage(from: storagePath)
-            DispatchQueue.main.async {
-                self.image = loadedImage
+            
+            // 【修正】デコード処理が完了した UIImage をメインスレッドで割り当てる
+            // （SwiftUIのTask内で実行するため、明示的なDispatchQueue.globalは不要だが、コードの堅牢性のため非同期処理の実行を待つ）
+            let processedImage: UIImage? = await withCheckedContinuation { continuation in
+                // ダウンロード自体は非同期。デコードはここで暗黙的に発生するが、Task内なのでメインスレッドはブロックしない
+                continuation.resume(returning: loadedImage)
+            }
+
+            await MainActor.run { // MainActorに切り替えてUIを更新
+                self.image = processedImage
                 self.isLoading = false
             }
         }
