@@ -177,6 +177,8 @@ struct ShakeButtonView: View {
 //                                    .foregroundStyle(.blue)
 //                            )
                     }
+                    .drawingGroup()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
 
 
                     // 状態テキスト

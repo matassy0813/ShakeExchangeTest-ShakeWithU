@@ -134,9 +134,13 @@ class MultipeerManager: NSObject, ObservableObject, MCSessionDelegate, MCNearbyS
             jsonObject["type"] = "profile"
             
             // アイコン画像をDataとして追加する場合
-            if let image = loadUserIcon(named: user.icon),
-               let imageData = image.jpegData(compressionQuality: 0.8) {
-                jsonObject["iconData"] = imageData.base64EncodedString()
+            if let image = loadUserIcon(named: user.icon) {
+                // ★【修正点】送信前に画像をリサイズし、データサイズを削減
+                let resizedImage = image.resized(to: CGSize(width: 100, height: 100)) // 100x100にリサイズ
+                if let imageData = resizedImage.jpegData(compressionQuality: 0.8) { // JPEGに圧縮
+                    jsonObject["iconData"] = imageData.base64EncodedString()
+                    print("[MultipeerManager] ⚙️ アイコン画像をリサイズ＆Base64エンコードしました。Data size: \(imageData.count / 1024) KB")
+                }
             }
             
             // 最終的な辞書をDataに戻して送信
@@ -323,4 +327,14 @@ class MultipeerManager: NSObject, ObservableObject, MCSessionDelegate, MCNearbyS
     }
 
     func browser(_ browser: MCNearbyServiceBrowser, lostPeer peerID: MCPeerID) {}
+}
+extension UIImage {
+    func resized(to newSize: CGSize) -> UIImage {
+        let rect = CGRect(x: 0, y: 0, width: newSize.width, height: newSize.height)
+        UIGraphicsBeginImageContextWithOptions(newSize, false, 1.0)
+        self.draw(in: rect)
+        let newImage = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        return newImage ?? self
+    }
 }

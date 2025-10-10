@@ -89,7 +89,7 @@ struct AuthView: View {
         }
         .fullScreenCover(isPresented: $showingTermsAndPrivacy) { //
             if !authManager.hasAgreedToTerms { //
-                // TermsAndPrivacyConsentView(isPresented: $showingTermsAndPrivacy) // 未定義のためコメントアウト
+                TermsAndPrivacyConsentView(isPresented: $showingTermsAndPrivacy) // 未定義のためコメントアウト
             }
         }
         .onChange(of: authManager.isAuthenticated) { isAuthenticated in //

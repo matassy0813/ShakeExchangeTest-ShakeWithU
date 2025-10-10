@@ -14,9 +14,9 @@ class ImageCacheManager {
     private let imageCache = NSCache<NSString, UIImage>()
 
     private init() {
-        // キャッシュの上限を設定 (例: 50枚, 100MBなど)
-        imageCache.countLimit = 50
-        imageCache.totalCostLimit = 1024 * 1024 * 100 // 100MB
+        // キャッシュの上限を設定
+        imageCache.countLimit = 100 // 50枚から100枚に増加
+        imageCache.totalCostLimit = 1024 * 1024 * 250 // 100MBから250MBに増加 <-- 【修正】
     }
 
     // キャッシュに画像を保存

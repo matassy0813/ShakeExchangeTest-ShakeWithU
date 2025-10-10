@@ -339,6 +339,7 @@ struct SocialNetworkView: View {
             if var node = tempNodes[id] { //
                 node.position.x = node.position.x * scale + offsetX //
                 node.position.y = node.position.y * scale + offsetY //
+                node.velocity = .zero // 速度をゼロにリセット
                 tempNodes[id] = node //
             }
         }
@@ -350,7 +351,7 @@ struct SocialNetworkView: View {
     private func startSimulation() { //
         stopSimulation() // 既存のタイマーがあれば停止
         isSimulationRunning = true //
-        simulationTimer = Timer.scheduledTimer(withTimeInterval: 0.016, repeats: true) { _ in //
+        simulationTimer = Timer.scheduledTimer(withTimeInterval: 0.033, repeats: true) { _ in //
             self.updateSimulation() //
         }
         print("[SocialNetworkView] ⚙️ シミュレーションを開始しました。") //

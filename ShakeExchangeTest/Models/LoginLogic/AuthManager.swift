@@ -100,8 +100,8 @@ class AuthManager: ObservableObject {
         do {
             try Auth.auth().signOut()
             print("[AuthManager] ✅ サインアウト成功。")
-            self.needsInitialProfileSetup = false
-            self.hasAgreedToTerms = false // ログアウト時に同意状態をリセット
+//            self.needsInitialProfileSetup = false
+//            self.hasAgreedToTerms = false // ログアウト時に同意状態をリセット
             saveTermsAgreementStatus() // UserDefaultsも更新
             // ローカルのプロフィールデータもリセット
             // この処理はProfileManager.shared.resetProfileForUnauthenticatedUser() に任せる

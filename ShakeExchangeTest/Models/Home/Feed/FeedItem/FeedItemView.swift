@@ -124,6 +124,10 @@ struct FeedItemView: View {
         .onAppear {
             loadImageFromStorage()
         }
+        .onDisappear {
+            self.outerImage = nil
+            self.isLoadingImage = true
+        }
         .onChange(of: feedEntry.photo.outerImage) { _ in
             loadImageFromStorage() // パスが変更されたら画像を再ロード
         }

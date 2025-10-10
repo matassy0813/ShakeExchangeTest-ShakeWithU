@@ -230,6 +230,14 @@ class AlbumManager: ObservableObject {
 
 
     func downloadImageWithSignedURL(photoId: String, completion: @escaping (UIImage?) -> Void) {
+        let imageKey = "signed-\(photoId)" // 署名付きURL用のキャッシュキー
+        // MARK: - 【修正1】キャッシュチェックを追加
+        if let cachedImage = ImageCacheManager.shared.get(for: imageKey) {
+            print("✅ [ImageCache] 署名URLキャッシュから画像を取得: \(imageKey)")
+            completion(cachedImage)
+            return
+        }
+        
         let functions = Functions.functions()
         // ここを修正: "getSignedFeedPhotoURL" から "getSignedFeedPhotoUrl" に変更
         functions.httpsCallable("getSignedFeedPhotoUrl").call(["photoId": photoId]) { result, error in
@@ -249,6 +257,9 @@ class AlbumManager: ObservableObject {
 
             URLSession.shared.dataTask(with: url) { data, _, _ in
                 if let data = data, let image = UIImage(data: data) {
+                    // MARK: - 【修正2】ダウンロード後、画像をキャッシュに保存
+                    ImageCacheManager.shared.set(image, for: imageKey)
+                    print("📥 [ImageCache] 署名URL経由でダウンロードし、キャッシュに保存: \(imageKey)")
                     completion(image)
                 } else {
                     completion(nil)
