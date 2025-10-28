@@ -91,7 +91,7 @@ struct FriendCardView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous)) // ← ガラス
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
             .overlay(
                 // 外周のヘアライン
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
@@ -107,13 +107,11 @@ struct FriendCardView: View {
                     )
                     .blendMode(.screen)
             )
-            .frame(width: UIScreen.main.bounds.width * 0.85)
-            .shadow(color: .black.opacity(0.6), radius: 14, x: 0, y: 10)  // 浮遊影
-            .shadow(color: .white.opacity(0.05), radius: 2, x: 0, y: 1)   // 縁の光
+            .shadow(color: .black.opacity(0.6), radius: 14, x: 0, y: 10)
+            .shadow(color: .white.opacity(0.05), radius: 2, x: 0, y: 1)
             .scaleEffect(isPressed ? 0.98 : 1)
             .animation(.spring(response: 0.35, dampingFraction: 0.8), value: isPressed)
-            .contentShape(RoundedRectangle(cornerRadius: 18)) // カード全体をタップ可能に
-//            .simultaneousGesture(
+            .contentShape(RoundedRectangle(cornerRadius: 18))
 //                LongPressGesture(minimumDuration: 0)          // タップ時だけ軽く縮むUI演出
 //                    .onChanged { _ in isPressed = true }
 //                    .onEnded   { _ in isPressed = false }

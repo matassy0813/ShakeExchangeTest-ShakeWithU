@@ -13,6 +13,8 @@ import GoogleMobileAds // ← ファイル先頭に追加
 import UserNotifications
 import FirebaseMessaging
 import FirebaseFirestore
+import AppTrackingTransparency // <--- ADDED
+import AdSupport // <--- ADDED
 
 import UIKit
 
@@ -135,6 +137,7 @@ struct ShakeExchangeTestApp: App {
                             .environmentObject(FriendManager.shared)
                             .onAppear {
                                 print("[ShakeExchangeTestApp] ➡️ 認証済み、メインコンテンツへ遷移。")
+                                requestTrackingAuthorization() // <--- ADDED CALL
                             }
                     }
                 } else {
@@ -150,6 +153,18 @@ struct ShakeExchangeTestApp: App {
                 Task {
                     await authManager.checkSessionValidity()
                 }
+            }
+        }
+    }
+}
+
+// Global/Helper function for ATT <--- ADDED
+@MainActor
+func requestTrackingAuthorization() {
+    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { // Add a short delay for smooth UI transition
+        if #available(iOS 14, *) {
+            ATTrackingManager.requestTrackingAuthorization { status in
+                print("ATT Status: \(status.rawValue)")
             }
         }
     }

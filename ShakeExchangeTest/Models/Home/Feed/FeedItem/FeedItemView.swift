@@ -7,6 +7,7 @@
 import SwiftUI
 import FirebaseAuth
 import Firebase
+import FirebaseFirestore // ADDED for reporting
 
 struct FeedItemView: View {
     let feedEntry: FeedEntry // FeedEntry全体を受け取る
@@ -15,10 +16,13 @@ struct FeedItemView: View {
     @State private var isLiked = false
     @State private var outerImage: UIImage? = nil
     @State private var isLoadingImage: Bool = true
+    @State private var showingReportActionSheet = false
+    @State private var isReporting = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            // ユーザー行（撮影者と相手のアイコン・名前を表示）
+            
+            // MARK: 1. ユーザー行 (プロフィール遷移のみ) - 元のシンプルな構造に戻す
             NavigationLink(
                 destination: FriendProfileView(friend: feedEntry.friend) // 友達のプロフィールへ遷移
             ) {
@@ -65,10 +69,10 @@ struct FeedItemView: View {
                     }
 
                     Spacer()
-                    Image(systemName: "ellipsis")
+                    // 🚨 通報ボタンはここから削除 🚨
                 }
             }
-            .buttonStyle(PlainButtonStyle()) // これを追加！！
+            .buttonStyle(PlainButtonStyle())
 
             // 画像部分（outerカメラをfeedに表示）
             if isLoadingImage {
@@ -92,9 +96,10 @@ struct FeedItemView: View {
                     .foregroundColor(.gray)
                     .cornerRadius(12)
             }
-
-            // アクションバー（いいねボタン）
+            
+            // MARK: 2. アクションバー（いいねボタンと通報ボタン）
             HStack {
+                // いいねボタン
                 Button(action: {
                     withAnimation {
                         isLiked.toggle()
@@ -104,6 +109,20 @@ struct FeedItemView: View {
                         .foregroundColor(isLiked ? .red : .primary)
                         .font(.title3)
                 }
+                
+                // 通報ボタンをいいねボタンの隣に移動 (長押しジェスチャで発動)
+                Button(action: {}) { // ダミーのアクション
+                    Image(systemName: "flag")
+                        .foregroundColor(.secondary)
+                        .font(.title3)
+                }
+                .simultaneousGesture(
+                    LongPressGesture(minimumDuration: 0.5) // 長押しで通報を開始
+                        .onEnded { _ in
+                            showingReportActionSheet = true
+                        }
+                )
+                
                 Spacer()
             }
 
@@ -130,6 +149,21 @@ struct FeedItemView: View {
         }
         .onChange(of: feedEntry.photo.outerImage) { _ in
             loadImageFromStorage() // パスが変更されたら画像を再ロード
+        }
+        // 通報確認ダイアログ
+        .confirmationDialog(
+            Text("投稿の報告"),
+            isPresented: $showingReportActionSheet,
+            titleVisibility: .visible
+        ) {
+            Button(isReporting ? "送信中..." : "不適切なコンテンツとして報告する", role: .destructive) {
+                if !isReporting {
+                    Task { await reportFeedContent() }
+                }
+            }
+            .disabled(isReporting)
+
+            Button("キャンセル", role: .cancel) {}
         }
     }
 
@@ -177,5 +211,38 @@ struct FeedItemView: View {
             .appendingPathComponent(filename)
         return UIImage(contentsOfFile: url.path)
     }
+    
+    // UGC Moderation: New function for reporting feed content
+    private func reportFeedContent() async {
+        isReporting = true
+        defer {
+            DispatchQueue.main.async {
+                self.isReporting = false
+            }
+        }
+        print("[FeedItemView] 🚨 投稿報告リクエスト: PhotoID=\(feedEntry.photo.id.uuidString) Owner=\(feedEntry.photo.userUUID)")
+        
+        let db = Firestore.firestore()
+        let reportData: [String: Any] = [
+            "reporterId": Auth.auth().currentUser?.uid ?? "unknown",
+            "reportedContentId": feedEntry.photo.id.uuidString,
+            "reportedContentOwnerId": feedEntry.photo.userUUID,
+            "reason": "Inappropriate photo or note",
+            "timestamp": Timestamp(date: Date()),
+            "status": "pending"
+        ]
+        
+        do {
+            try await db.collection("reports").addDocument(data: reportData)
+            print("[FeedItemView] ✅ 報告ドキュメント作成成功。")
+            await MainActor.run {
+                // 報告成功のフィードバックとしてシートを閉じる
+                self.showingReportActionSheet = false
+                // NOTE: deferブロックがisReportingをfalseに戻す
+            }
+        } catch {
+            print("[FeedItemView] ❌ 報告処理失敗: \(error.localizedDescription)")
+            // NOTE: deferブロックがisReportingをfalseに戻す
+        }
+    }
 }
-

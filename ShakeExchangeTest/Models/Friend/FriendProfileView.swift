@@ -3,16 +3,11 @@
 //  ShakeExchangeTest
 //
 //  Created by 俣江悠聖 on 2025/05/20.
-//
-//
-//  FriendProfileView.swift
-//  ShakeExchangeTest
-//
-//  Created by 俣江悠聖 on 2025/05/20.
-//
+
 import SwiftUI
 import UIKit // UIImage のために必要
 import FirebaseFirestore // DocumentSnapshotのために追加
+import FirebaseAuth
 
 struct FriendProfileView: View {
     let friend: Friend
@@ -34,6 +29,9 @@ struct FriendProfileView: View {
     @State private var isLoadingMore: Bool = false
     private let pageSize: Int = 10
     
+    @State private var showBlockReportActionSheet = false
+    @State private var isBlockingUser = false
+    
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
@@ -49,12 +47,15 @@ struct FriendProfileView: View {
                 }
 
                 // URL（外部リンク）
-                if let url = URL(string: friend.link), UIApplication.shared.canOpenURL(url) { // URLが有効かチェック
-                    Link(destination: url) {
-                        Text("🔗 \(friend.link)")
-                            .font(.caption)
-                            .foregroundColor(.blue)
-                            .underline()
+                // MARK: - FIX: Line 41の型チェック問題を解消するため、条件式を分離
+                if let url = URL(string: friend.link) {
+                    if UIApplication.shared.canOpenURL(url) { // URLが有効かチェック
+                        Link(destination: url) {
+                            Text("🔗 \(friend.link)")
+                                .font(.caption)
+                                .foregroundColor(.blue)
+                                .underline()
+                        }
                     }
                 }
 
@@ -140,7 +141,7 @@ struct FriendProfileView: View {
         .navigationTitle("Friend Profile")
         .onAppear {
             loadMyPhotosWithFriend()
-            Task { await loadInteractions() }   // ← これが無いので永遠にLoadingに
+            Task { await loadInteractions() }
         }
         .onChange(of: AuthManager.shared.isAuthenticated) { isAuthenticated in
             if isAuthenticated {
@@ -154,13 +155,14 @@ struct FriendProfileView: View {
         }
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
+                // Trash icon is replaced with ellipsis to indicate multiple options
                 Button {
-                    showDeleteConfirm = true
+                    showBlockReportActionSheet = true // <--- NEW ACTION
                 } label: {
-                    Image(systemName: "trash")
-                        .foregroundColor(.red)
+                    Image(systemName: "ellipsis.circle") // Changed icon for more options
+                        .foregroundColor(.white)
                 }
-                .accessibilityLabel("友達を削除")
+                .accessibilityLabel("友達のオプション")
             }
         }
         .confirmationDialog(
@@ -178,7 +180,25 @@ struct FriendProfileView: View {
             }
             Button("キャンセル", role: .cancel) {}
         }
+        .confirmationDialog(
+            Text("\(friend.name)さんのオプション"),
+            isPresented: $showBlockReportActionSheet,
+            titleVisibility: .visible
+        ) {
+            // isBlockingUserに応じてボタンの無効化を適用
+            Button(isBlockingUser ? "処理中..." : "ブロックして報告する", role: .destructive) {
+                if !isBlockingUser { // 二重送信防止のガード
+                    Task { await blockAndReportFriend() }
+                }
+            }
+            .disabled(isBlockingUser) // confirmationDialogのButtonは.disabledに対応
 
+            Button("友達を削除", role: .destructive) {
+                showDeleteConfirm = true
+            }
+
+            Button("キャンセル", role: .cancel) {}
+        }
     }
     
     // MARK: - アイコン画像読み込みヘルパー (FriendHeaderViewと同じロジック)
@@ -288,5 +308,38 @@ struct FriendProfileView: View {
             }
         }
     }
-}
+    
+    private func blockAndReportFriend() async {
+            isBlockingUser = true
+            print("[FriendProfileView] 🚨 ブロックと報告リクエスト: \(friend.uuid)")
+            
+            let db = Firestore.firestore()
+            let reportData: [String: Any] = [
+                "reporterId": Auth.auth().currentUser?.uid ?? "unknown",
+                "reportedUserId": friend.uuid,
+                "reason": "UGC violation (profile/harassment)",
+                "timestamp": Timestamp(date: Date()),
+                "status": "pending" // 開発者側で24時間以内に確認する状態
+            ]
+            
+            do {
+                try await db.collection("reports").addDocument(data: reportData)
+                
+                if let userId = Auth.auth().currentUser?.uid {
+                    // ユーザーをブロックし、今後のShakeでの再接続を防ぐためのロジックを実装
+                    try await db.collection("users").document(userId).collection("blocks").document(friend.uuid).setData(["blockedAt": Timestamp(date: Date())])
+                }
 
+                // 友達リストから削除することで即座に表示上から非表示にする
+                await FriendManager.shared.deleteFriend(uuid: friend.uuid)
+                
+                await MainActor.run {
+                    isBlockingUser = false
+                    dismiss()
+                }
+            } catch {
+                print("[FriendProfileView] ❌ ブロック/報告処理失敗: \(error.localizedDescription)")
+                await MainActor.run { isBlockingUser = false }
+            }
+        }
+}
