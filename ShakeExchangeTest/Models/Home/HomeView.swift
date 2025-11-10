@@ -23,102 +23,65 @@ struct HomeView: View {
                 .toolbarBackground(.visible, for: .navigationBar)         // ② 背景を有効に
                 .toolbarBackground(Color.black, for: .navigationBar)      // ③ 背景を黒に
                 .toolbarColorScheme(.dark, for: .navigationBar)           // ④ タイトル/アイコンを白系に
-                .navigationBarItems(
-                    // カメラボタンと紙飛行機ボタンを削除
-                    trailing: HStack {
-                        Button(action: {
-                            showingTerms = true
-                        }) {
-                            Text("規約")
-                                .font(.caption2)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
-                                .background(
-                                    Capsule().fill(
-                                        LinearGradient(
-                                            gradient: Gradient(colors: [Color.purple.opacity(0.3), Color.blue.opacity(0.3)]),
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
-                                    )
-                                )
-                                .foregroundColor(.white)
-                        }
-                        .sheet(isPresented: $showingTerms) {
-                            TermsAndPrivacyView(documentType: .terms)
-                        }
+                .toolbar { // <--- CHANGE: Use toolbar for clearer structure (optional, but clean)
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Menu { // <--- CONSOLIDATE BUTTONS INTO A MENU
+                            
+                            // 1. 利用規約
+                            Button("利用規約") {
+                                showingTerms = true
+                            }
+                            
+                            // 2. プライバシーポリシー
+                            Button("プライバシーポリシー (PP)") {
+                                showingPrivacy = true
+                            }
 
-                        Button(action: {
-                            showingPrivacy = true
-                        }) {
-                            Text("PP") // Privacy Policy の略
-                                .font(.caption2)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
-                                .background(
-                                    Capsule().fill(
-                                        LinearGradient(
-                                            gradient: Gradient(colors: [Color.pink.opacity(0.3), Color.orange.opacity(0.3)]),
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
-                                    )
-                                )
-                                .foregroundColor(.white)
-                        }
-                        .sheet(isPresented: $showingPrivacy) {
-                            TermsAndPrivacyView(documentType: .privacy)
-                        }
-                        
-                        Button(action: {
-                            showingTutorial = true
-                        }) {
-                            Text("使い方")
-                                .font(.caption2)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
-                                .background(
-                                    Capsule().fill(
-                                        LinearGradient(
-                                            gradient: Gradient(colors: [Color.green.opacity(0.3), Color.teal.opacity(0.3)]),
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
-                                    )
-                                )
-                                .foregroundColor(.white)
-                        }
-                        .sheet(isPresented: $showingTutorial) {
-                            ShakeTutorialView()
-                        }
-                        
-                        Button(action: {
-                            showingLogoutAlert = true
-                        }) {
-                            Image(systemName: "rectangle.portrait.and.arrow.right")
-                                .font(.caption)
-                                .padding(8)
-                                .background(Color.red.opacity(0.2))
-                                .clipShape(Circle())
-                                .foregroundColor(.red)
-                        }
-                        .alert(isPresented: $showingLogoutAlert) {
-                            Alert(
-                                title: Text("ログアウトしますか？"),
-                                message: Text("現在のアカウントからログアウトします。"),
-                                primaryButton: .destructive(Text("ログアウト")) {
-                                    Task {
-                                        isLoggingOut = true
-                                        _ = await AuthManager.shared.signOut()
-                                        isLoggingOut = false
-                                    }
-                                },
-                                secondaryButton: .cancel()
-                            )
-                        }
+                            // 3. 使い方
+                            Button("使い方チュートリアル") {
+                                showingTutorial = true
+                            }
 
+                            Divider()
+                            
+                            // 4. ログアウト
+                            Button("ログアウト", role: .destructive) {
+                                showingLogoutAlert = true
+                            }
+                            
+                        } label: {
+                            // アイコンを一つに集約し、混雑を解消
+                            Image(systemName: "ellipsis.circle")
+                                .font(.title2)
+                                .foregroundColor(.white)
+                        }
+                }
+            }
+
+        }
+        // Sheets are correctly applied to the entire view hierarchy
+        .sheet(isPresented: $showingTerms) {
+            TermsAndPrivacyView(documentType: .terms)
+        }
+        .sheet(isPresented: $showingPrivacy) {
+            TermsAndPrivacyView(documentType: .privacy)
+        }
+        .sheet(isPresented: $showingTutorial) {
+            ShakeTutorialView()
+        }
+        .alert(isPresented: $showingLogoutAlert) {
+            Alert(
+                title: Text("ログアウトしますか？"),
+                message: Text("現在のアカウントからログアウトします。"),
+                primaryButton: .destructive(Text("ログアウト")) {
+                    Task {
+                        isLoggingOut = true
+                        _ = await AuthManager.shared.signOut()
+                        isLoggingOut = false
                     }
-                )
+                },
+                secondaryButton: .cancel()
+            )
         }
         .navigationViewStyle(StackNavigationViewStyle())
     }

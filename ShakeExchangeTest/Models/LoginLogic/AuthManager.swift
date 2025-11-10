@@ -158,5 +158,56 @@ class AuthManager: ObservableObject {
             hasAgreedToTerms = false
         }
     }
+    
+    // MARK: - アカウント削除
+        func deleteAccount() async -> Bool {
+            errorMessage = nil
+            guard let user = Auth.auth().currentUser, let userId = self.userId else {
+                errorMessage = "ユーザーが認証されていません。"
+                return false
+            }
+            
+            let db = Firestore.firestore()
+            
+            do {
+                // 1. 関連データを削除/クリーンアップを開始
+                // Friendsサブコレクションのメタデータを削除
+                await FriendManager.shared.clearAllFriends()
+                print("[AuthManager] 🗑️ FriendManager経由で友達リストを削除しました。")
+                
+                // Albumsサブコレクションのメタデータを削除
+                try? await AlbumManager.shared.clearAllAlbumPhotos()
+                print("[AuthManager] 🗑️ AlbumManager経由でアルバムメタデータを削除しました。")
+                
+                // Profileドキュメントを削除
+                let profileRef = db.collection("users").document(userId).collection("profile").document("current")
+                try await profileRef.delete()
+                print("[AuthManager] 🗑️ Profileドキュメントを削除しました。")
+                
+                // 2. Firebase Authユーザーを削除
+                try await user.delete()
+                print("[AuthManager] ✅ Firebase Authアカウントを削除しました: \(userId)")
+                
+                // 3. ローカル状態をリセット
+                await MainActor.run {
+                    self.isAuthenticated = false
+                    self.userId = nil
+                    self.hasAgreedToTerms = false
+                    self.saveTermsAgreementStatus()
+                    ProfileManager.shared.resetProfileForUnauthenticatedUser() // プロフィールマネージャの状態もリセット
+                }
+                
+                return true
+                
+            } catch let error as NSError where user.uid == userId && error.code == AuthErrorCode.requiresRecentLogin.rawValue {
+                errorMessage = "アカウントを削除するには、最近のログインが必要です。一度ログアウトしてから再ログインしてください。"
+                print("[AuthManager] ❌ アカウント削除失敗: 再認証が必要です。")
+                return false
+            } catch {
+                errorMessage = "アカウント削除に失敗しました: \(error.localizedDescription)"
+                print("[AuthManager] ❌ アカウント削除失敗: \(error.localizedDescription)")
+                return false
+            }
+        }
 }
 

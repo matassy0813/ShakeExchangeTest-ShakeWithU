@@ -226,8 +226,32 @@ class AlbumManager: ObservableObject {
             throw PhotoError.firestoreLoadFailed(error)
         }
     }
-
-
+    
+    func clearAllAlbumPhotos() async throws {
+        guard let userId = auth.currentUser?.uid else {
+            throw PhotoError.userNotAuthenticated
+        }
+        
+        let albumCollectionRef = db.collection("users").document(userId).collection("albums")
+        
+        // NOTE: Firestoreのコレクション全体削除は、25,000件以上のドキュメントがあるとバッチ処理に失敗する可能性があります。
+        // Cloud Functionsの再帰的削除を利用することを強く推奨します。
+        
+        let documents = try await albumCollectionRef.getDocuments().documents
+        
+        guard !documents.isEmpty else {
+            print("[AlbumManager] ℹ️ 削除するアルバム写真メタデータがありません。")
+            return
+        }
+        
+        let batch = db.batch()
+        for document in documents {
+            batch.deleteDocument(document.reference)
+        }
+        
+        try await batch.commit()
+        print("[AlbumManager] 🗑️ Firestoreアルバムメタデータを\(documents.count)件削除しました。")
+    }
 
     func downloadImageWithSignedURL(photoId: String, completion: @escaping (UIImage?) -> Void) {
         let imageKey = "signed-\(photoId)" // 署名付きURL用のキャッシュキー

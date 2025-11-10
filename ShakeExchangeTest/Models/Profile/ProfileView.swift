@@ -9,6 +9,11 @@ import SwiftUI
 struct ProfileView: View {
     @ObservedObject var profileManager = ProfileManager.shared
     
+    // アカウント削除用のStateを追加
+    @State private var showingDeleteAlert = false
+    @State private var isDeletingAccount = false
+    @State private var deleteError: String?
+    
     var body: some View {
         ZStack{
             Color.black.ignoresSafeArea()
@@ -102,6 +107,25 @@ struct ProfileView: View {
                         //                                .cornerRadius(8)
                         //                        }
                         //                    }
+                        Button(role: .destructive) {
+                            showingDeleteAlert = true
+                        } label: {
+                            if isDeletingAccount {
+                                ProgressView()
+                                    .padding()
+                            } else {
+                                Text("アカウントを削除する")
+                                    .fontWeight(.bold)
+                                    .padding()
+                                    .frame(maxWidth: .infinity)
+                                    .background(Color.red.opacity(0.15))
+                                    .foregroundColor(.red)
+                                    .cornerRadius(12)
+                            }
+                        }
+                        .disabled(isDeletingAccount)
+                        .padding(.horizontal)
+                        .padding(.vertical, 20)
                     }
                     .padding(.bottom, 40)
                     .background(Color.black) // 🔥 背景黒
@@ -127,6 +151,23 @@ struct ProfileView: View {
             }
             .background(Color.black.ignoresSafeArea())
         }
+        // MARK: - アカウント削除確認アラート
+        .alert("アカウントを完全に削除しますか？", isPresented: $showingDeleteAlert) {
+            Button("アカウントを削除", role: .destructive) {
+                Task {
+                    await deleteAccountAction()
+                }
+            }
+            Button("キャンセル", role: .cancel) {}
+        } message: {
+            Text("この操作は元に戻せません。あなたのプロフィール、友達、全ての写真データが削除されます。")
+        }
+        // MARK: - 削除実行アクション
+        .alert("削除エラー", isPresented: .constant(deleteError != nil)) {
+             Button("OK") { deleteError = nil }
+        } message: {
+             Text(deleteError ?? "不明なエラーが発生しました。")
+        }
     }
     
     // MARK: - アイコン画像読み込みヘルパー (ProfileManagerからコピー)
@@ -138,6 +179,23 @@ struct ProfileView: View {
         // 2. ドキュメントディレクトリからの読み込みを試行
         let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent(filename)
         return UIImage(contentsOfFile: url.path)
+    }
+    
+    private func deleteAccountAction() async {
+        isDeletingAccount = true
+        // AuthManagerから最新のエラーメッセージを取得できるように、まずnilにする
+        AuthManager.shared.errorMessage = nil
+        
+        let success = await AuthManager.shared.deleteAccount()
+        
+        await MainActor.run {
+            self.isDeletingAccount = false
+            if !success {
+                // AuthManagerが設定したエラーメッセージを表示
+                self.deleteError = AuthManager.shared.errorMessage ?? "アカウントの削除中にエラーが発生しました。"
+            }
+            // 成功した場合、AuthManagerのロジックにより自動でAuthViewに遷移するはずです。
+        }
     }
 }
 

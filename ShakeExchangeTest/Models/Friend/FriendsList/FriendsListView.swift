@@ -18,7 +18,7 @@ struct FriendsListView: View {
     @State private var sortOption: SortOption = .recentlyAdded
     @State private var searchText: String = "" // 検索テキスト
 
-    private let contentMaxWidth: CGFloat = 600
+    private let contentMaxWidth: CGFloat = 300
     
     // 検索とソートを適用した友達リスト
     var filteredAndSortedFriends: [Friend] {
