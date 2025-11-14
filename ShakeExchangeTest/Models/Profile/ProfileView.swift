@@ -17,7 +17,7 @@ struct ProfileView: View {
     var body: some View {
         ZStack{
             Color.black.ignoresSafeArea()
-            NavigationView {
+            NavigationStack {
                 ScrollView {
                     VStack(spacing: 16) {
                         // アイコン表示

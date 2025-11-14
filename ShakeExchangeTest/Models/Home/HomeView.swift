@@ -15,7 +15,7 @@ struct HomeView: View {
     @State private var showingLogoutAlert = false
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             FeedView() // ← FeedView を使う
                 .background(Color.black)
                 .navigationTitle("Main")

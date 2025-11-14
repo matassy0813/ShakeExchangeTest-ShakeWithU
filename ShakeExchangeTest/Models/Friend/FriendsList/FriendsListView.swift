@@ -45,7 +45,7 @@ struct FriendsListView: View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
                 // 背景：暗いグラデ＋大きめボケ模様で奥行き
                 LinearGradient(colors: [.black, .black.opacity(0.92)],

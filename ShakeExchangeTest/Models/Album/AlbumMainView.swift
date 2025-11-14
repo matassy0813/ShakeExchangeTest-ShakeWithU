@@ -16,7 +16,7 @@ struct AlbumMainView: View {
     @State private var myRecentPhotosErrorMessage: String? = nil
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 28) { // 全体的なスペーシングを増やす
                     // 自分のアルバムボタン

@@ -141,7 +141,7 @@ struct ShakeButtonView: View {
     @Environment(\.presentationMode) var presentationMode
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
                 Color.blue.opacity(0.1).ignoresSafeArea()
 
@@ -153,9 +153,9 @@ struct ShakeButtonView: View {
                         FullScreenRippleBackground(color: .blue, animate: animate, tilt: tilt)
                         
                         // ✅ 追加：左側の扇形スキャン（装飾のみ）
-                        FanRadarPeopleView(iconColor: .blue, tilt: tilt)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-                            .padding(.leading, 6)
+//                        FanRadarPeopleView(iconColor: .blue, tilt: tilt)
+//                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+//                            .padding(.leading, 6)
                         // “床”の楕円影（カードが浮いて見える）
                         Ellipse()
                             .fill(Color.black.opacity(0.45))
@@ -584,9 +584,3 @@ struct FanRadarPeopleView: View {
         .allowsHitTesting(false)
     }
 }
-
-
-
-
-
-

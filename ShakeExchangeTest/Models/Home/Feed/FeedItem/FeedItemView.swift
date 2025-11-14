@@ -75,27 +75,29 @@ struct FeedItemView: View {
             .buttonStyle(PlainButtonStyle())
 
             // 画像部分（outerカメラをfeedに表示）
-            if isLoadingImage {
-                ProgressView()
-                    .frame(height: 250)
-                    .frame(maxWidth: .infinity)
-                    .background(Color.gray.opacity(0.2))
-                    .cornerRadius(12)
-            } else if let image = outerImage {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(height: 250)
-                    .clipped()
-                    .cornerRadius(12)
-            } else {
-                Image(systemName: "photo") // 画像がない場合のプレースホルダー
-                    .resizable()
-                    .scaledToFit()
-                    .frame(height: 250)
-                    .foregroundColor(.gray)
-                    .cornerRadius(12)
+            Group {
+                if isLoadingImage {
+                    ProgressView()
+                        .frame(height: 250)
+                        .frame(maxWidth: .infinity)
+                        .background(Color.gray.opacity(0.2))
+                } else if let image = outerImage {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(height: 250)
+                        .clipped()
+                } else {
+                    Image(systemName: "photo") // 画像がない場合のプレースホルダー
+                        .resizable()
+                        .scaledToFit()
+                        .frame(height: 250)
+                        .foregroundColor(.gray)
+                }
             }
+            .cornerRadius(12)
+            .frame(maxWidth: 420)              // ← ここでカード自体の最大幅を制限（iPhoneだと画面いっぱい）
+            .frame(maxWidth: .infinity)        // ← ここで親いっぱいまで広げつつ中央寄せ
             
             // MARK: 2. アクションバー（いいねボタンと通報ボタン）
             HStack {
